@@ -4,24 +4,21 @@ import (
 	"testing"
 )
 
-func TestHyprlandParser(t *testing.T) {
-	// Test workspace event parsing
-	event := `workspace>>3`
-	state, err := ParseHyprlandEvent(event)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if state.ActiveWorkspace != 3 {
-		t.Errorf("expected workspace 3, got %d", state.ActiveWorkspace)
-	}
+func TestHyprlandTrackerName(t *testing.T) {
+	state := NewState()
+	tracker := NewHyprlandTracker(state)
 
-	// Test window focus event
-	event = `focuswindow>>firefox`
-	state, err = ParseHyprlandEvent(event)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	if tracker.Name() != "hyprland" {
+		t.Errorf("expected name hyprland, got %s", tracker.Name())
 	}
-	if state.WindowClass != "firefox" {
-		t.Errorf("expected window class firefox, got %s", state.WindowClass)
+}
+
+func TestHyprlandTrackerEvents(t *testing.T) {
+	state := NewState()
+	tracker := NewHyprlandTracker(state)
+
+	events := tracker.Events()
+	if events == nil {
+		t.Error("expected events channel to be non-nil")
 	}
 }

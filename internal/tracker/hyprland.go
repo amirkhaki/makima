@@ -2,11 +2,12 @@ package tracker
 
 import (
 	"context"
-	"fmt"
-	"net"
-	"os"
-	"strings"
+	"strconv"
+	"sync"
 	"time"
+
+	"github.com/thiagokokada/hyprland-go"
+	"github.com/thiagokokada/hyprland-go/event"
 )
 
 type Event struct {
@@ -15,14 +16,19 @@ type Event struct {
 }
 
 type HyprlandTracker struct {
-	events chan Event
-	state  *State
+	events     chan Event
+	state      *State
+	requestCli *hyprland.RequestClient
+	eventCli   *event.EventClient
+	mu         sync.Mutex
+	running    bool
 }
 
 func NewHyprlandTracker(state *State) *HyprlandTracker {
 	return &HyprlandTracker{
-		events: make(chan Event, 100),
-		state:  state,
+		events:     make(chan Event, 100),
+		state:      state,
+		requestCli: hyprland.MustClient(),
 	}
 }
 
@@ -31,48 +37,54 @@ func (t *HyprlandTracker) Name() string {
 }
 
 func (t *HyprlandTracker) Start(ctx context.Context) error {
-	socketPath := getHyprSocket()
-	if socketPath == "" {
-		return fmt.Errorf("HYPRLAND_INSTANCE_SIGNATURE not set")
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	if t.running {
+		return nil
 	}
 
-	conn, err := net.Dial("unix", socketPath)
-	if err != nil {
-		return fmt.Errorf("failed to connect to Hyprland socket: %w", err)
-	}
+	t.eventCli = event.MustClient()
 
+	// Subscribe to events in a goroutine
 	go func() {
-		defer conn.Close()
-		buf := make([]byte, 4096)
+		handler := &hyprlandHandler{tracker: t}
+		t.eventCli.Subscribe(ctx, handler,
+			event.EventWorkspace,
+			event.EventActiveWindow,
+		)
+	}()
+
+	// Poll current state periodically
+	go func() {
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
 		for {
 			select {
 			case <-ctx.Done():
 				return
-			default:
-				conn.SetReadDeadline(time.Now().Add(time.Second))
-				n, err := conn.Read(buf)
-				if err != nil {
-					continue
-				}
-				lines := strings.Split(string(buf[:n]), "\n")
-				for _, line := range lines {
-					if line == "" {
-						continue
-					}
-					state, err := ParseHyprlandEvent(line)
-					if err == nil {
-						t.state.UpdateHyprland(*state)
-						t.events <- Event{Type: "hyprland", Data: state}
-					}
-				}
+			case <-ticker.C:
+				t.updateState()
 			}
 		}
 	}()
 
+	t.running = true
 	return nil
 }
 
 func (t *HyprlandTracker) Stop() error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	if !t.running {
+		return nil
+	}
+
+	if t.eventCli != nil {
+		t.eventCli.Close()
+	}
+	t.running = false
 	return nil
 }
 
@@ -80,28 +92,86 @@ func (t *HyprlandTracker) Events() <-chan Event {
 	return t.events
 }
 
-func ParseHyprlandEvent(event string) (*HyprlandState, error) {
-	state := &HyprlandState{}
-
-	if strings.HasPrefix(event, "workspace>>") {
-		var ws int
-		_, err := fmt.Sscanf(event, "workspace>>%d", &ws)
-		if err != nil {
-			return nil, err
-		}
-		state.ActiveWorkspace = ws
-	} else if strings.HasPrefix(event, "focuswindow>>") {
-		class := strings.TrimPrefix(event, "focuswindow>>")
-		state.WindowClass = class
+func (t *HyprlandTracker) updateState() {
+	// Get active workspace
+	ws, err := t.requestCli.ActiveWorkspace()
+	if err == nil {
+		t.state.UpdateHyprland(HyprlandState{
+			ActiveWorkspace: ws.Id,
+		})
 	}
 
-	return state, nil
+	// Get active window
+	window, err := t.requestCli.ActiveWindow()
+	if err == nil {
+		t.state.UpdateHyprland(HyprlandState{
+			WindowClass: window.Class,
+			WindowTitle: window.Title,
+		})
+	}
 }
 
-func getHyprSocket() string {
-	sig := os.Getenv("HYPRLAND_INSTANCE_SIGNATURE")
-	if sig == "" {
-		return ""
+type hyprlandHandler struct {
+	tracker *HyprlandTracker
+	event.DefaultEventHandler
+}
+
+func (h *hyprlandHandler) Workspace(w event.WorkspaceName) {
+	id, _ := strconv.Atoi(string(w))
+	h.tracker.state.UpdateHyprland(HyprlandState{
+		ActiveWorkspace: id,
+	})
+	h.tracker.events <- Event{
+		Type: "workspace",
+		Data: w,
 	}
-	return "/tmp/hypr/" + sig + "/.socket.sock"
+}
+
+func (h *hyprlandHandler) ActiveWindow(w event.ActiveWindow) {
+	h.tracker.state.UpdateHyprland(HyprlandState{
+		WindowClass: w.Name,
+		WindowTitle: w.Title,
+	})
+	h.tracker.events <- Event{
+		Type: "window",
+		Data: w,
+	}
+}
+
+// Dispatch sends a command to Hyprland
+func (t *HyprlandTracker) Dispatch(command string) error {
+	_, err := t.requestCli.Dispatch(command)
+	return err
+}
+
+// GetWorkspaces returns all workspaces
+func (t *HyprlandTracker) GetWorkspaces() ([]hyprland.Workspace, error) {
+	return t.requestCli.Workspaces()
+}
+
+// GetActiveWorkspace returns the active workspace
+func (t *HyprlandTracker) GetActiveWorkspace() (hyprland.Workspace, error) {
+	return t.requestCli.ActiveWorkspace()
+}
+
+// GetActiveWindow returns the active window
+func (t *HyprlandTracker) GetActiveWindow() (hyprland.Window, error) {
+	return t.requestCli.ActiveWindow()
+}
+
+// GetClients returns all clients/windows
+func (t *HyprlandTracker) GetClients() ([]hyprland.Client, error) {
+	return t.requestCli.Clients()
+}
+
+// ReloadConfig reloads Hyprland configuration
+func (t *HyprlandTracker) ReloadConfig() error {
+	_, err := t.requestCli.Reload()
+	return err
+}
+
+// SetKeyword sets a Hyprland keyword
+func (t *HyprlandTracker) SetKeyword(keyword string) error {
+	_, err := t.requestCli.Keyword(keyword)
+	return err
 }

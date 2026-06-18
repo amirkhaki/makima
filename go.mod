@@ -2,7 +2,10 @@ module github.com/amirkhaki/makima
 
 go 1.26.3
 
-require github.com/go-rod/rod v0.116.2
+require (
+	github.com/go-rod/rod v0.116.2
+	github.com/thiagokokada/hyprland-go v0.4.1
+)
 
 require (
 	github.com/ysmood/fetchup v0.2.3 // indirect
