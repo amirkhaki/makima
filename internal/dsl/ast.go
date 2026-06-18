@@ -82,3 +82,8 @@ type BudgetConfig struct {
 	MaxPerDay   int
 	MaxPerWeek  int
 }
+
+type Category struct {
+	Name     string
+	Patterns []string
+}
