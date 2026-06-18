@@ -9,11 +9,15 @@ import (
 )
 
 type ActionExecutor struct {
-	state *tracker.State
+	state  *tracker.State
+	chrome *tracker.ChromeTracker
 }
 
-func NewActionExecutor(state *tracker.State) *ActionExecutor {
-	return &ActionExecutor{state: state}
+func NewActionExecutor(state *tracker.State, chrome *tracker.ChromeTracker) *ActionExecutor {
+	return &ActionExecutor{
+		state:  state,
+		chrome: chrome,
+	}
 }
 
 func (a *ActionExecutor) Execute(action dsl.Action) error {
@@ -34,19 +38,32 @@ func (a *ActionExecutor) Execute(action dsl.Action) error {
 }
 
 func (a *ActionExecutor) executeCDP(action *dsl.CDPAction) error {
-	return nil
+	if a.chrome == nil {
+		return fmt.Errorf("chrome tracker not available")
+	}
+
+	switch action.Command {
+	case "close-tab":
+		browser := a.state.GetBrowser()
+		return a.chrome.CloseTab(browser.Domain)
+	default:
+		return fmt.Errorf("unknown CDP command: %s", action.Command)
+	}
 }
 
 func (a *ActionExecutor) executeHyprctl(action *dsl.HyprctlAction) error {
-	return nil
+	cmd := exec.Command("hyprctl", "dispatch", action.Command)
+	return cmd.Run()
 }
 
 func (a *ActionExecutor) executePopup(action *dsl.PopupAction) error {
-	return nil
+	cmd := exec.Command("notify-send", action.Title, action.Message)
+	return cmd.Run()
 }
 
 func (a *ActionExecutor) executeNotify(action *dsl.NotifyAction) error {
-	return nil
+	cmd := exec.Command("notify-send", action.Summary, action.Body)
+	return cmd.Run()
 }
 
 func (a *ActionExecutor) executeExec(action *dsl.ExecAction) error {

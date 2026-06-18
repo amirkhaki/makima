@@ -21,7 +21,7 @@ func (m *mockTracker) Events() <-chan tracker.Event { return m.events }
 func TestDaemonEventLoop(t *testing.T) {
 	state := tracker.NewState()
 	sessionMgr := engine.NewSessionManager()
-	actionExecutor := engine.NewActionExecutor(state)
+	actionExecutor := engine.NewActionExecutor(state, nil)
 	ruleEngine := engine.NewEngine(state)
 
 	mock := &mockTracker{
