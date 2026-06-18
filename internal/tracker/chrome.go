@@ -2,13 +2,11 @@ package tracker
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/go-rod/rod"
 )
 
 type TabInfo struct {
@@ -19,16 +17,15 @@ type TabInfo struct {
 }
 
 type ChromeTracker struct {
-	events chan Event
-	state  *State
-	client *http.Client
+	events  chan Event
+	state   *State
+	browser *rod.Browser
 }
 
 func NewChromeTracker(state *State) *ChromeTracker {
 	return &ChromeTracker{
 		events: make(chan Event, 100),
 		state:  state,
-		client: &http.Client{Timeout: 2 * time.Second},
 	}
 }
 
@@ -37,29 +34,36 @@ func (t *ChromeTracker) Name() string {
 }
 
 func (t *ChromeTracker) Start(ctx context.Context) error {
+	t.browser = rod.New().MustConnect()
+
 	go func() {
 		ticker := time.NewTicker(time.Second)
 		defer ticker.Stop()
 		for {
 			select {
 			case <-ctx.Done():
+				t.browser.MustClose()
 				return
 			case <-ticker.C:
 				tabs, err := t.getTabs()
 				if err != nil {
 					continue
 				}
-				if len(tabs) > 0 {
-					t.updateTab(tabs[0])
-					t.events <- Event{Type: "chrome", Data: tabs[0]}
+				for _, tab := range tabs {
+					t.updateTab(tab)
+					t.events <- Event{Type: "chrome", Data: tab}
 				}
 			}
 		}
 	}()
+
 	return nil
 }
 
 func (t *ChromeTracker) Stop() error {
+	if t.browser != nil {
+		t.browser.MustClose()
+	}
 	return nil
 }
 
@@ -68,23 +72,28 @@ func (t *ChromeTracker) Events() <-chan Event {
 }
 
 func (t *ChromeTracker) getTabs() ([]TabInfo, error) {
-	resp, err := t.client.Get("http://localhost:9222/json")
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
+	pages := t.browser.MustPages()
+	tabs := make([]TabInfo, 0, len(pages))
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
+	for _, page := range pages {
+		info, err := page.Info()
+		if err != nil {
+			continue
+		}
+
+		if info.Type != "page" {
+			continue
+		}
+
+		tabs = append(tabs, TabInfo{
+			ID:     string(info.TargetID),
+			URL:    info.URL,
+			Title:  info.Title,
+			Domain: extractDomain(info.URL),
+		})
 	}
 
-	var rawTabs []map[string]interface{}
-	if err := json.Unmarshal(body, &rawTabs); err != nil {
-		return nil, err
-	}
-
-	return ParseTabInfo(rawTabs), nil
+	return tabs, nil
 }
 
 func (t *ChromeTracker) updateTab(tab TabInfo) {
@@ -93,28 +102,6 @@ func (t *ChromeTracker) updateTab(tab TabInfo) {
 		TabTitle: tab.Title,
 		Domain:   tab.Domain,
 	})
-}
-
-func ParseTabInfo(rawTabs []map[string]interface{}) []TabInfo {
-	tabs := make([]TabInfo, 0, len(rawTabs))
-	for _, raw := range rawTabs {
-		tabType, _ := raw["type"].(string)
-		if tabType != "page" {
-			continue
-		}
-
-		id, _ := raw["id"].(string)
-		title, _ := raw["title"].(string)
-		u, _ := raw["url"].(string)
-
-		tabs = append(tabs, TabInfo{
-			ID:     id,
-			Title:  title,
-			URL:    u,
-			Domain: extractDomain(u),
-		})
-	}
-	return tabs
 }
 
 func extractDomain(rawURL string) string {
@@ -131,10 +118,43 @@ func extractDomain(rawURL string) string {
 }
 
 func (t *ChromeTracker) CloseTab(tabID string) error {
-	resp, err := t.client.Get(fmt.Sprintf("http://localhost:9222/json/close/%s", tabID))
-	if err != nil {
-		return err
+	pages := t.browser.MustPages()
+	for _, page := range pages {
+		info, err := page.Info()
+		if err != nil {
+			continue
+		}
+		if string(info.TargetID) == tabID {
+			return page.Close()
+		}
 	}
-	defer resp.Body.Close()
 	return nil
+}
+
+func (t *ChromeTracker) Navigate(url string) error {
+	pages := t.browser.MustPages()
+	if len(pages) > 0 {
+		return pages[0].Navigate(url)
+	}
+	return nil
+}
+
+func (t *ChromeTracker) GetActiveTab() (*TabInfo, error) {
+	pages := t.browser.MustPages()
+	for _, page := range pages {
+		info, err := page.Info()
+		if err != nil {
+			continue
+		}
+		if info.Type == "page" {
+			tab := &TabInfo{
+				ID:     string(info.TargetID),
+				URL:    info.URL,
+				Title:  info.Title,
+				Domain: extractDomain(info.URL),
+			}
+			return tab, nil
+		}
+	}
+	return nil, nil
 }

@@ -1,73 +1,60 @@
 package tracker
 
 import (
-	"encoding/json"
 	"testing"
 )
 
-func TestChromeCDPParser(t *testing.T) {
-	jsonData := `[
-		{
-			"id": "ABC123",
-			"title": "Example Page",
-			"url": "https://example.com/page",
-			"type": "page"
-		},
-		{
-			"id": "DEF456",
-			"title": "Another Page",
-			"url": "https://another.com",
-			"type": "page"
+func TestExtractDomain(t *testing.T) {
+	tests := []struct {
+		url      string
+		expected string
+	}{
+		{"https://example.com/page", "example.com"},
+		{"https://sub.example.com/path", "example.com"},
+		{"https://another.com", "another.com"},
+		{"http://test.co.uk/page", "co.uk"},
+		{"https://localhost:3000", "localhost"},
+		{"", ""},
+	}
+
+	for _, tt := range tests {
+		got := extractDomain(tt.url)
+		if got != tt.expected {
+			t.Errorf("extractDomain(%q) = %q, want %q", tt.url, got, tt.expected)
 		}
-	]`
-
-	var rawTabs []map[string]interface{}
-	if err := json.Unmarshal([]byte(jsonData), &rawTabs); err != nil {
-		t.Fatalf("failed to unmarshal: %v", err)
-	}
-
-	tabs := ParseTabInfo(rawTabs)
-	if len(tabs) != 2 {
-		t.Fatalf("expected 2 tabs, got %d", len(tabs))
-	}
-
-	if tabs[0].ID != "ABC123" {
-		t.Errorf("expected ID ABC123, got %s", tabs[0].ID)
-	}
-	if tabs[0].Title != "Example Page" {
-		t.Errorf("expected title Example Page, got %s", tabs[0].Title)
-	}
-	if tabs[0].URL != "https://example.com/page" {
-		t.Errorf("expected URL https://example.com/page, got %s", tabs[0].URL)
-	}
-	if tabs[0].Domain != "example.com" {
-		t.Errorf("expected domain example.com, got %s", tabs[0].Domain)
-	}
-
-	if tabs[1].Domain != "another.com" {
-		t.Errorf("expected domain another.com, got %s", tabs[1].Domain)
 	}
 }
 
 func TestChromeTrackerState(t *testing.T) {
 	state := NewState()
 
-	tabs := []TabInfo{
-		{ID: "1", URL: "https://github.com/user/repo", Title: "GitHub", Domain: "github.com"},
-		{ID: "2", URL: "https://stackoverflow.com/questions", Title: "SO", Domain: "stackoverflow.com"},
+	tab := TabInfo{
+		ID:     "1",
+		URL:    "https://github.com/user/repo",
+		Title:  "GitHub",
+		Domain: "github.com",
 	}
 
 	tracker := &ChromeTracker{state: state}
-	tracker.updateTab(tabs[0])
+	tracker.updateTab(tab)
 
 	got := state.GetBrowser()
 	if got.URL != "https://github.com/user/repo" {
-		t.Errorf("expected URL github.com, got %s", got.URL)
+		t.Errorf("expected URL https://github.com/user/repo, got %s", got.URL)
 	}
 	if got.Domain != "github.com" {
 		t.Errorf("expected domain github.com, got %s", got.Domain)
 	}
 	if got.TabTitle != "GitHub" {
 		t.Errorf("expected title GitHub, got %s", got.TabTitle)
+	}
+}
+
+func TestChromeTrackerName(t *testing.T) {
+	state := NewState()
+	tracker := NewChromeTracker(state)
+
+	if tracker.Name() != "chrome" {
+		t.Errorf("expected name chrome, got %s", tracker.Name())
 	}
 }
