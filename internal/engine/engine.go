@@ -11,16 +11,32 @@ type RuleEvent struct {
 }
 
 type Engine struct {
-	state *tracker.State
-	rules []*dsl.Rule
+	state      *tracker.State
+	rules      []*dsl.Rule
+	categories map[string]*dsl.Category
 }
 
 func NewEngine(state *tracker.State) *Engine {
-	return &Engine{state: state}
+	return &Engine{
+		state:      state,
+		categories: make(map[string]*dsl.Category),
+	}
 }
 
 func (e *Engine) AddRule(rule *dsl.Rule) {
 	e.rules = append(e.rules, rule)
+}
+
+func (e *Engine) GetRules() []*dsl.Rule {
+	return e.rules
+}
+
+func (e *Engine) SetCategories(categories map[string]*dsl.Category) {
+	e.categories = categories
+}
+
+func (e *Engine) GetCategories() map[string]*dsl.Category {
+	return e.categories
 }
 
 func (e *Engine) Evaluate() []RuleEvent {

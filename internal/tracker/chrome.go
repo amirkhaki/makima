@@ -2,6 +2,7 @@ package tracker
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"strings"
 	"time"
@@ -34,7 +35,19 @@ func (t *ChromeTracker) Name() string {
 }
 
 func (t *ChromeTracker) Start(ctx context.Context) error {
-	t.browser = rod.New().MustConnect()
+	// Try to connect to existing Chrome with remote debugging
+	// Chrome must be running with --remote-debugging-port=9222
+	controlURL := "ws://127.0.0.1:9222"
+	
+	browser := rod.New().ControlURL(controlURL)
+	err := browser.Connect()
+	if err != nil {
+		// Chrome not available, log and continue without it
+		fmt.Printf("Chrome tracker: %v\n", err)
+		fmt.Println("Chrome tracker: Running in passive mode (no browser control)")
+		return nil
+	}
+	t.browser = browser
 
 	go func() {
 		ticker := time.NewTicker(time.Second)
