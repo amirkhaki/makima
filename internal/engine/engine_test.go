@@ -3,8 +3,8 @@ package engine
 import (
 	"testing"
 
-	"github.com/makima/makima/internal/dsl"
-	"github.com/makima/makima/internal/tracker"
+	"github.com/amirkhaki/makima/internal/dsl"
+	"github.com/amirkhaki/makima/internal/tracker"
 )
 
 func TestRuleEvaluation(t *testing.T) {

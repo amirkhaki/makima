@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/makima/makima/internal/engine"
-	"github.com/makima/makima/internal/tracker"
+	"github.com/amirkhaki/makima/internal/engine"
+	"github.com/amirkhaki/makima/internal/tracker"
 )
 
 type mockTracker struct {

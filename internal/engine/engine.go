@@ -1,8 +1,8 @@
 package engine
 
 import (
-	"github.com/makima/makima/internal/dsl"
-	"github.com/makima/makima/internal/tracker"
+	"github.com/amirkhaki/makima/internal/dsl"
+	"github.com/amirkhaki/makima/internal/tracker"
 )
 
 type RuleEvent struct {
