@@ -69,7 +69,7 @@ func (t *ChromeTracker) Start(ctx context.Context) error {
 		return nil
 	}
 
-	browser := rod.New().ControlURL(controlURL)
+	browser := rod.New().ControlURL(controlURL).NoDefaultDevice()
 	if err := browser.Connect(); err != nil {
 		fmt.Printf("Chrome tracker: failed to connect: %v\n", err)
 		return nil
