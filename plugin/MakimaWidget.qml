@@ -125,6 +125,27 @@ PluginComponent {
     }
 
     horizontalBarPill: Component {
+        Column {
+            id: content
+            spacing: 2
+
+            DankIcon {
+                name: root.statusIcon
+                color: root.isConnected ? Theme.primary : Theme.surfaceTextDim
+                size: Theme.iconSizeSmall
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
+
+            StyledText {
+                text: root.statusText
+                color: Theme.surfaceText
+                font.pixelSize: Theme.fontSizeTiny
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
+        }
+    }
+
+    verticalBarPill: Component {
         Row {
             id: content
             spacing: Theme.spacingXS
@@ -133,34 +154,13 @@ PluginComponent {
             DankIcon {
                 name: root.statusIcon
                 color: root.isConnected ? Theme.primary : Theme.surfaceTextDim
-                size: Theme.iconSize - 6
-            }
-
-            StyledText {
-                text: root.statusText
-                color: Theme.surfaceText
-                font.pixelSize: Theme.fontSizeMedium
-            }
-        }
-    }
-
-    verticalBarPill: Component {
-        Column {
-            id: content
-            spacing: Theme.spacingXS
-            anchors.horizontalCenter: parent ? parent.horizontalCenter : undefined
-
-            DankIcon {
-                name: root.statusIcon
-                color: root.isConnected ? Theme.primary : Theme.surfaceTextDim
-                size: Theme.iconSize - 6
+                size: Theme.iconSizeSmall
             }
 
             StyledText {
                 text: root.statusText
                 color: Theme.surfaceText
                 font.pixelSize: Theme.fontSizeSmall
-                rotation: 90
             }
         }
     }
