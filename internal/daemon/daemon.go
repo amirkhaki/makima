@@ -59,10 +59,14 @@ func (d *Daemon) UnregisterClient(ch chan []byte) {
 func (d *Daemon) Broadcast(msg []byte) {
 	d.mu.RLock()
 	defer d.mu.RUnlock()
+	clientCount := len(d.clients)
+	log.Debug("daemon", "broadcasting to %d clients", clientCount)
 	for ch := range d.clients {
 		select {
 		case ch <- msg:
+			log.Debug("daemon", "sent to client channel")
 		default:
+			log.Debug("daemon", "client channel full, skipping")
 		}
 	}
 }

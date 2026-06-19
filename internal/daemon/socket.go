@@ -8,6 +8,8 @@ import (
 	"os"
 	"sync"
 	"syscall"
+
+	"github.com/amirkhaki/makima/internal/log"
 )
 
 type Request struct {
@@ -108,11 +110,14 @@ func (s *SocketServer) SetDaemon(d *Daemon) {
 }
 
 func (s *SocketServer) Serve() {
+	log.Info("socket: listening on %s", s.sockPath)
 	for {
 		conn, err := s.listener.Accept()
 		if err != nil {
+			log.Error("socket: accept error: %v", err)
 			return
 		}
+		log.Info("socket: client connected from %s", conn.RemoteAddr())
 		go s.handleConn(conn)
 	}
 }
