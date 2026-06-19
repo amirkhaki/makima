@@ -13,18 +13,4 @@ PluginSettings {
         placeholder: "/tmp/makima.sock"
         defaultValue: "/tmp/makima.sock"
     }
-
-    ToggleSetting {
-        settingKey: "browserTracking"
-        label: "Browser Tracking"
-        description: "Enable Chrome CDP browser tracking"
-        defaultValue: true
-    }
-
-    ToggleSetting {
-        settingKey: "hyprlandTracking"
-        label: "Hyprland Tracking"
-        description: "Enable Hyprland IPC tracking"
-        defaultValue: true
-    }
 }
