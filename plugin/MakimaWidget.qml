@@ -139,7 +139,7 @@ PluginComponent {
                 DankIcon {
                     name: root.statusIcon
                     color: root.isConnected ? Theme.primary : Theme.surfaceText
-                    font.pixelSize: Theme.iconSize
+                    size: Theme.iconSize
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
@@ -168,7 +168,7 @@ PluginComponent {
                 DankIcon {
                     name: root.statusIcon
                     color: root.isConnected ? Theme.primary : Theme.surfaceText
-                    font.pixelSize: Theme.iconSizeSmall
+                    size: Theme.iconSizeSmall
                     anchors.horizontalCenter: parent.horizontalCenter
                 }
 
@@ -384,7 +384,7 @@ PluginComponent {
                                 DankIcon {
                                     name: modelData.done ? "check_box" : "check_box_outline_blank"
                                     color: modelData.done ? Theme.primary : Theme.surfaceText
-                                    font.pixelSize: Theme.iconSizeSmall
+                                    size: Theme.iconSizeSmall
                                     anchors.verticalCenter: parent.verticalCenter
                                 }
                                 StyledText {
