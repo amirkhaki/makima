@@ -125,44 +125,64 @@ PluginComponent {
     }
 
     horizontalBarPill: Component {
-        Row {
-            id: content
-            spacing: Theme.spacingXS
+        StyledRect {
+            width: content.implicitWidth + Theme.spacingS * 2
+            height: parent.widgetThickness
+            radius: Theme.cornerRadius
+            color: Theme.surfaceContainerHigh
+            clip: true
 
-            DankIcon {
-                name: root.statusIcon
-                color: root.isConnected ? Theme.primary : Theme.surfaceTextDim
-                size: Theme.iconSize - 6
-                anchors.verticalCenter: parent.verticalCenter
-            }
+            Row {
+                id: content
+                anchors.centerIn: parent
+                spacing: Theme.spacingXS
 
-            StyledText {
-                text: root.statusText
-                color: Theme.surfaceText
-                font.pixelSize: Theme.fontSizeMedium
-                anchors.verticalCenter: parent.verticalCenter
+                DankIcon {
+                    name: root.statusIcon
+                    color: root.isConnected ? Theme.primary : Theme.surfaceTextDim
+                    size: Theme.iconSizeSmall
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+
+                StyledText {
+                    text: root.statusText
+                    color: Theme.surfaceText
+                    font.pixelSize: Theme.fontSizeSmall
+                    anchors.verticalCenter: parent.verticalCenter
+                    elide: Text.ElideRight
+                }
             }
         }
     }
 
     verticalBarPill: Component {
-        Column {
-            id: content
-            spacing: Theme.spacingXS
+        StyledRect {
+            width: parent.widgetThickness
+            height: content.implicitHeight + Theme.spacingS * 2
+            radius: Theme.cornerRadius
+            color: Theme.surfaceContainerHigh
+            clip: true
 
-            DankIcon {
-                name: root.statusIcon
-                color: root.isConnected ? Theme.primary : Theme.surfaceTextDim
-                size: Theme.iconSize - 6
-                anchors.horizontalCenter: parent.horizontalCenter
-            }
+            Column {
+                id: content
+                anchors.centerIn: parent
+                spacing: Theme.spacingXS
 
-            StyledText {
-                text: root.statusText
-                color: Theme.surfaceText
-                font.pixelSize: Theme.fontSizeSmall
-                rotation: 90
-                anchors.horizontalCenter: parent.horizontalCenter
+                DankIcon {
+                    name: root.statusIcon
+                    color: root.isConnected ? Theme.primary : Theme.surfaceTextDim
+                    size: Theme.iconSizeSmall
+                    anchors.horizontalCenter: parent.horizontalCenter
+                }
+
+                StyledText {
+                    text: root.statusText
+                    color: Theme.surfaceText
+                    font.pixelSize: Theme.fontSizeTiny
+                    rotation: 90
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    elide: Text.ElideRight
+                }
             }
         }
     }
@@ -205,7 +225,7 @@ PluginComponent {
                             spacing: Theme.spacingS
                             StyledText {
                                 text: "URL:"
-                                color: Theme.surfaceTextDim
+                                color: Theme.surfaceText
                                 font.pixelSize: Theme.fontSizeSmall
                             }
                             StyledText {
@@ -221,7 +241,7 @@ PluginComponent {
                             spacing: Theme.spacingS
                             StyledText {
                                 text: "Category:"
-                                color: Theme.surfaceTextDim
+                                color: Theme.surfaceText
                                 font.pixelSize: Theme.fontSizeSmall
                             }
                             StyledText {
@@ -235,7 +255,7 @@ PluginComponent {
                             spacing: Theme.spacingS
                             StyledText {
                                 text: "Workspace:"
-                                color: Theme.surfaceTextDim
+                                color: Theme.surfaceText
                                 font.pixelSize: Theme.fontSizeSmall
                             }
                             StyledText {
@@ -252,6 +272,7 @@ PluginComponent {
                     height: rulesColumn.implicitHeight + Theme.spacingL * 2
                     radius: Theme.cornerRadius
                     color: Theme.surfaceContainerHigh
+                    visible: root.rules.length > 0
 
                     Column {
                         id: rulesColumn
@@ -288,7 +309,7 @@ PluginComponent {
 
                         StyledText {
                             text: root.rules.length === 0 ? "No rules configured" : ""
-                            color: Theme.surfaceTextDim
+                            color: Theme.surfaceText
                             font.pixelSize: Theme.fontSizeSmall
                             visible: root.rules.length === 0
                         }
@@ -334,7 +355,7 @@ PluginComponent {
 
                         StyledText {
                             text: Object.keys(root.categories).length === 0 ? "No categories configured" : ""
-                            color: Theme.surfaceTextDim
+                            color: Theme.surfaceText
                             font.pixelSize: Theme.fontSizeSmall
                             visible: Object.keys(root.categories).length === 0
                         }
@@ -383,7 +404,7 @@ PluginComponent {
 
                         StyledText {
                             text: root.todos.length === 0 ? "No todos" : ""
-                            color: Theme.surfaceTextDim
+                            color: Theme.surfaceText
                             font.pixelSize: Theme.fontSizeSmall
                             visible: root.todos.length === 0
                         }
