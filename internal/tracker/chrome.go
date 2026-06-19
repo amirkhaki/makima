@@ -241,3 +241,7 @@ func (t *ChromeTracker) GetActiveTab() (*TabInfo, error) {
 	}
 	return nil, nil
 }
+
+func (t *ChromeTracker) GetTabs() ([]TabInfo, error) {
+	return t.getTabs()
+}

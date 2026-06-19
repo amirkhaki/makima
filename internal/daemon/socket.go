@@ -26,6 +26,7 @@ type SocketServer struct {
 	sockPath string
 	listener net.Listener
 	handler  Handler
+	daemon   *Daemon
 	mu       sync.Mutex
 }
 
@@ -49,6 +50,10 @@ func (s *SocketServer) SetHandler(h Handler) {
 	s.handler = h
 }
 
+func (s *SocketServer) SetDaemon(d *Daemon) {
+	s.daemon = d
+}
+
 func (s *SocketServer) Serve() {
 	for {
 		conn, err := s.listener.Accept()
@@ -60,8 +65,24 @@ func (s *SocketServer) Serve() {
 }
 
 func (s *SocketServer) handleConn(conn net.Conn) {
-	defer conn.Close()
+	// Create a channel for this client to receive broadcasts
+	clientCh := make(chan []byte, 100)
 
+	// Register with daemon for broadcasts
+	if s.daemon != nil {
+		s.daemon.RegisterClient(clientCh)
+		defer s.daemon.UnregisterClient(clientCh)
+	}
+
+	// Start goroutine to send broadcasts to this client
+	go func() {
+		for msg := range clientCh {
+			msg = append(msg, '\n')
+			conn.Write(msg)
+		}
+	}()
+
+	// Read requests from client
 	scanner := bufio.NewScanner(conn)
 	for scanner.Scan() {
 		var req Request

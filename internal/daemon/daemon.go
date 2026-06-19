@@ -2,8 +2,11 @@ package daemon
 
 import (
 	"context"
+	"encoding/json"
 	"reflect"
+	"sync"
 
+	"github.com/amirkhaki/makima/internal/dsl"
 	"github.com/amirkhaki/makima/internal/engine"
 	"github.com/amirkhaki/makima/internal/tracker"
 )
@@ -21,6 +24,9 @@ type Daemon struct {
 	actionExecutor *engine.ActionExecutor
 	ruleEngine     *engine.Engine
 	trackers       []Tracker
+
+	mu      sync.RWMutex
+	clients map[chan []byte]struct{}
 }
 
 func NewDaemon(state *tracker.State, sessionMgr *engine.SessionManager, actionExecutor *engine.ActionExecutor, ruleEngine *engine.Engine) *Daemon {
@@ -29,11 +35,35 @@ func NewDaemon(state *tracker.State, sessionMgr *engine.SessionManager, actionEx
 		sessionMgr:     sessionMgr,
 		actionExecutor: actionExecutor,
 		ruleEngine:     ruleEngine,
+		clients:        make(map[chan []byte]struct{}),
 	}
 }
 
 func (d *Daemon) AddTracker(tracker Tracker) {
 	d.trackers = append(d.trackers, tracker)
+}
+
+func (d *Daemon) RegisterClient(ch chan []byte) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.clients[ch] = struct{}{}
+}
+
+func (d *Daemon) UnregisterClient(ch chan []byte) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	delete(d.clients, ch)
+}
+
+func (d *Daemon) Broadcast(msg []byte) {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+	for ch := range d.clients {
+		select {
+		case ch <- msg:
+		default:
+		}
+	}
 }
 
 func (d *Daemon) Run(ctx context.Context) error {
@@ -100,7 +130,40 @@ func (d *Daemon) handleEvent(event tracker.Event) {
 	ruleEvents := d.ruleEngine.Evaluate()
 	for _, re := range ruleEvents {
 		for _, action := range re.Actions {
-			d.actionExecutor.Execute(action)
+			result := d.actionExecutor.Execute(action)
+
+			// Send popup to connected clients
+			if popupAction, ok := action.(*dsl.PopupAction); ok {
+				d.sendPopup(popupAction)
+			}
+
+			// Send result to connected clients
+			if result != nil {
+				d.sendError(result.Error())
+			}
 		}
 	}
+}
+
+func (d *Daemon) sendPopup(action *dsl.PopupAction) {
+	msg := map[string]interface{}{
+		"method": "popup",
+		"params": map[string]interface{}{
+			"title":   action.Title,
+			"message": action.Message,
+		},
+	}
+	data, _ := json.Marshal(msg)
+	d.Broadcast(data)
+}
+
+func (d *Daemon) sendError(errMsg string) {
+	msg := map[string]interface{}{
+		"method": "error",
+		"params": map[string]interface{}{
+			"message": errMsg,
+		},
+	}
+	data, _ := json.Marshal(msg)
+	d.Broadcast(data)
 }

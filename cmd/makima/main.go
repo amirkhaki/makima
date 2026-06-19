@@ -157,6 +157,9 @@ func startDaemon() {
 	}
 	defer socketServer.Close()
 
+	// Connect daemon to socket server for broadcasting
+	socketServer.SetDaemon(d)
+
 	// Set up request handler
 	socketServer.SetHandler(func(req daemon.Request) daemon.Response {
 		return handleRequest(req, state, ruleEngine, sessionMgr)
@@ -317,16 +320,49 @@ func ruleCmd(args []string) {
 			os.Exit(1)
 		}
 		for i, rule := range rules {
-			fmt.Printf("%d. %v\n", i+1, rule)
+			fmt.Printf("%d. %s (enabled: %v)\n", i+1, rule.Name, rule.Enabled)
 		}
 	case "add":
-		fmt.Println("rule: add - not implemented yet")
+		if len(args) < 4 {
+			fmt.Fprintln(os.Stderr, "Usage: makima rule add <name> <condition> <action>")
+			os.Exit(1)
+		}
+		id, err := client.RuleAdd(args[1], args[2], args[3])
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to add rule: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Rule added with ID: %s\n", id)
 	case "remove":
-		fmt.Println("rule: remove - not implemented yet")
+		if len(args) < 2 {
+			fmt.Fprintln(os.Stderr, "Usage: makima rule remove <id>")
+			os.Exit(1)
+		}
+		if err := client.RuleRemove(args[1]); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to remove rule: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println("Rule removed")
 	case "enable":
-		fmt.Println("rule: enable - not implemented yet")
+		if len(args) < 2 {
+			fmt.Fprintln(os.Stderr, "Usage: makima rule enable <id>")
+			os.Exit(1)
+		}
+		if err := client.RuleEnable(args[1]); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to enable rule: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println("Rule enabled")
 	case "disable":
-		fmt.Println("rule: disable - not implemented yet")
+		if len(args) < 2 {
+			fmt.Fprintln(os.Stderr, "Usage: makima rule disable <id>")
+			os.Exit(1)
+		}
+		if err := client.RuleDisable(args[1]); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to disable rule: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println("Rule disabled")
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown rule subcommand: %s\n", args[0])
 		os.Exit(1)

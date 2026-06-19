@@ -3,6 +3,7 @@ package engine
 import (
 	"fmt"
 	"os/exec"
+	"strings"
 
 	"github.com/amirkhaki/makima/internal/dsl"
 	"github.com/amirkhaki/makima/internal/tracker"
@@ -44,21 +45,31 @@ func (a *ActionExecutor) executeCDP(action *dsl.CDPAction) error {
 
 	switch action.Command {
 	case "close-tab":
-		browser := a.state.GetBrowser()
-		return a.chrome.CloseTab(browser.Domain)
+		tabs, err := a.chrome.GetTabs()
+		if err != nil {
+			return err
+		}
+		if len(tabs) > 0 {
+			return a.chrome.CloseTab(tabs[0].ID)
+		}
+		return fmt.Errorf("no tabs to close")
+	case "navigate":
+		return a.chrome.Navigate("")
 	default:
 		return fmt.Errorf("unknown CDP command: %s", action.Command)
 	}
 }
 
 func (a *ActionExecutor) executeHyprctl(action *dsl.HyprctlAction) error {
-	cmd := exec.Command("hyprctl", "dispatch", action.Command)
+	parts := strings.Fields(action.Command)
+	cmd := exec.Command("hyprctl", parts...)
 	return cmd.Run()
 }
 
 func (a *ActionExecutor) executePopup(action *dsl.PopupAction) error {
-	cmd := exec.Command("notify-send", action.Title, action.Message)
-	return cmd.Run()
+	// Popup is handled by broadcasting to connected clients
+	// Just return nil here - the daemon broadcasts the popup
+	return nil
 }
 
 func (a *ActionExecutor) executeNotify(action *dsl.NotifyAction) error {
