@@ -4,12 +4,9 @@
   "description": "Personal assistant with rule-based automation",
   "version": "1.0.0",
   "author": "makima",
-  "type": "composite",
-  "capabilities": ["daemon", "dankbar-widget"],
-  "components": {
-    "daemon": "./MakimaDaemon.qml",
-    "widget": "./MakimaWidget.qml"
-  },
+  "type": "widget",
+  "capabilities": ["dankbar-widget"],
+  "component": "./MakimaWidget.qml",
   "settings": "./MakimaSettings.qml",
   "requires_dms": ">=0.1.0",
   "permissions": ["settings_read", "settings_write"]
