@@ -127,12 +127,12 @@ PluginComponent {
     horizontalBarPill: Component {
         Row {
             id: content
-            spacing: Theme.spacingXS
+            spacing: Theme.spacingS
 
             DankIcon {
                 name: root.statusIcon
                 color: root.isConnected ? Theme.primary : Theme.surfaceTextDim
-                size: Theme.iconSizeSmall
+                size: 14
                 anchors.verticalCenter: parent.verticalCenter
             }
 
@@ -148,12 +148,12 @@ PluginComponent {
     verticalBarPill: Component {
         Column {
             id: content
-            spacing: Theme.spacingXS
+            spacing: Theme.spacingS
 
             DankIcon {
                 name: root.statusIcon
                 color: root.isConnected ? Theme.primary : Theme.surfaceTextDim
-                size: Theme.iconSizeSmall
+                size: 14
                 anchors.horizontalCenter: parent.horizontalCenter
             }
 
