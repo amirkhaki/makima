@@ -128,9 +128,9 @@ func (t *ChromeTracker) readPort() (int, error) {
 }
 
 func (t *ChromeTracker) Stop() error {
-	if t.browser != nil {
-		t.browser.MustClose()
-	}
+	// Don't close the browser - just stop monitoring
+	// The browser is managed by the user, not by makima
+	t.browser = nil
 	return nil
 }
 

@@ -73,11 +73,8 @@ func (d *Daemon) Run(ctx context.Context) error {
 		}
 	}
 
-	defer func() {
-		for _, t := range d.trackers {
-			t.Stop()
-		}
-	}()
+	// Don't defer Stop - let trackers run until context is cancelled
+	// The goroutines in trackers will exit when ctx.Done() fires
 
 	events := d.eventChan(ctx)
 

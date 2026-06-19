@@ -75,7 +75,7 @@ func parseCategoryLine(line string) (*Category, error) {
 }
 
 func parseRuleLine(line string) (*Rule, error) {
-	rule := &Rule{}
+	rule := &Rule{Enabled: true}
 
 	// Parse trigger
 	if strings.HasPrefix(line, "entering ") {

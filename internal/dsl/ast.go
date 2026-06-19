@@ -16,6 +16,11 @@ type Rule struct {
 	Grace     time.Duration
 	Cooldown  time.Duration
 	Budget    *BudgetConfig
+	Enabled   bool
+}
+
+func NewRule() *Rule {
+	return &Rule{Enabled: true}
 }
 
 type Condition interface {
