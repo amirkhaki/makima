@@ -120,7 +120,10 @@ func startDaemon() {
 
 	// Create trackers
 	hyprland := tracker.NewHyprlandTracker(state)
-	chrome := tracker.NewChromeTracker(state)
+	
+	// Chrome tracker with configurable port file
+	portFile := getBrowserPortFile()
+	chrome := tracker.NewChromeTrackerWithPortFile(state, portFile)
 
 	// Create action executor
 	actionExecutor := engine.NewActionExecutor(state, chrome)
@@ -450,6 +453,14 @@ func getConfigDir() string {
 		return "."
 	}
 	return home + "/.config/makima"
+}
+
+func getBrowserPortFile() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return home + "/.config/BraveSoftware/Brave-Browser/DevToolsActivePort"
 }
 
 func getSocketPath() string {
