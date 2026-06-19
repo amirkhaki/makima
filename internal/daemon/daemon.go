@@ -25,17 +25,19 @@ type Daemon struct {
 	actionExecutor *engine.ActionExecutor
 	ruleEngine     *engine.Engine
 	trackers       []Tracker
+	chromeTracker  *tracker.ChromeTracker
 
 	mu      sync.RWMutex
 	clients map[chan []byte]struct{}
 }
 
-func NewDaemon(state *tracker.State, sessionMgr *engine.SessionManager, actionExecutor *engine.ActionExecutor, ruleEngine *engine.Engine) *Daemon {
+func NewDaemon(state *tracker.State, sessionMgr *engine.SessionManager, actionExecutor *engine.ActionExecutor, ruleEngine *engine.Engine, chrome *tracker.ChromeTracker) *Daemon {
 	return &Daemon{
 		state:          state,
 		sessionMgr:     sessionMgr,
 		actionExecutor: actionExecutor,
 		ruleEngine:     ruleEngine,
+		chromeTracker:  chrome,
 		clients:        make(map[chan []byte]struct{}),
 	}
 }
@@ -131,6 +133,11 @@ func (d *Daemon) eventChan(ctx context.Context) <-chan tracker.Event {
 func (d *Daemon) handleEvent(event tracker.Event) {
 	log.Event("daemon", "event received: type=%s", event.Type)
 
+	// When Hyprland detects browser window focus, poll CDP for active tab URL
+	if event.Type == "window" {
+		d.pollBrowserTab()
+	}
+
 	ruleEvents := d.ruleEngine.Evaluate()
 	log.Event("daemon", "rule evaluation: %d rules matched", len(ruleEvents))
 
@@ -146,6 +153,57 @@ func (d *Daemon) handleEvent(event tracker.Event) {
 			}
 
 			// Send result to connected clients
+			if result != nil {
+				log.Error("action failed: %v", result)
+				d.sendError(result.Error())
+			}
+		}
+	}
+}
+
+func (d *Daemon) pollBrowserTab() {
+	hypr := d.state.GetHyprland()
+	browser := d.state.GetBrowser()
+
+	// Check if the focused window is a browser
+	if hypr.WindowClass != "brave-browser" && hypr.WindowClass != "chrome" && hypr.WindowClass != "chromium" {
+		return
+	}
+
+	// Query CDP for the active tab
+	tabs, err := d.chromeTracker.GetTabs()
+	if err != nil || len(tabs) == 0 {
+		return
+	}
+
+	// Find the tab with the most recent URL (active tab)
+	for _, tab := range tabs {
+		if browser.URL != tab.URL {
+			log.Event("daemon", "browser tab detected: %s (%s)", tab.Domain, tab.URL)
+			d.state.UpdateBrowser(tracker.BrowserState{
+				URL:      tab.URL,
+				TabTitle: tab.Title,
+				Domain:   tab.Domain,
+			})
+			// Trigger rule evaluation after state update
+			d.evaluateAndExecute()
+			return
+		}
+	}
+}
+
+func (d *Daemon) evaluateAndExecute() {
+	ruleEvents := d.ruleEngine.Evaluate()
+	for _, re := range ruleEvents {
+		for _, action := range re.Actions {
+			log.Event("daemon", "executing action: %T", action)
+			result := d.actionExecutor.Execute(action)
+
+			if popupAction, ok := action.(*dsl.PopupAction); ok {
+				log.Event("daemon", "sending popup: %s", popupAction.Message)
+				d.sendPopup(popupAction)
+			}
+
 			if result != nil {
 				log.Error("action failed: %v", result)
 				d.sendError(result.Error())
