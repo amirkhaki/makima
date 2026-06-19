@@ -127,7 +127,7 @@ PluginComponent {
     horizontalBarPill: Component {
         Row {
             id: content
-            spacing: Theme.spacingS
+            spacing: Theme.spacingM
 
             DankIcon {
                 name: root.statusIcon
@@ -148,7 +148,7 @@ PluginComponent {
     verticalBarPill: Component {
         Column {
             id: content
-            spacing: Theme.spacingS
+            spacing: Theme.spacingM
 
             DankIcon {
                 name: root.statusIcon
@@ -192,7 +192,7 @@ PluginComponent {
                         id: dashboardColumn
                         anchors.fill: parent
                         anchors.margins: Theme.spacingL
-                        spacing: Theme.spacingS
+                        spacing: Theme.spacingM
 
                         StyledText {
                             text: "Dashboard"
@@ -202,7 +202,7 @@ PluginComponent {
                         }
 
                         Row {
-                            spacing: Theme.spacingS
+                            spacing: Theme.spacingM
                             StyledText {
                                 text: "URL:"
                                 color: Theme.surfaceText
@@ -218,7 +218,7 @@ PluginComponent {
                         }
 
                         Row {
-                            spacing: Theme.spacingS
+                            spacing: Theme.spacingM
                             StyledText {
                                 text: "Category:"
                                 color: Theme.surfaceText
@@ -232,7 +232,7 @@ PluginComponent {
                         }
 
                         Row {
-                            spacing: Theme.spacingS
+                            spacing: Theme.spacingM
                             StyledText {
                                 text: "Workspace:"
                                 color: Theme.surfaceText
@@ -258,7 +258,7 @@ PluginComponent {
                         id: rulesColumn
                         anchors.fill: parent
                         anchors.margins: Theme.spacingL
-                        spacing: Theme.spacingS
+                        spacing: Theme.spacingM
 
                         StyledText {
                             text: "Rules (" + root.rules.length + ")"
@@ -271,7 +271,7 @@ PluginComponent {
                             model: root.rules
 
                             Row {
-                                spacing: Theme.spacingS
+                                spacing: Theme.spacingM
                                 StyledText {
                                     text: modelData.name || modelData.id || "Rule"
                                     color: Theme.surfaceText
@@ -306,7 +306,7 @@ PluginComponent {
                         id: categoriesColumn
                         anchors.fill: parent
                         anchors.margins: Theme.spacingL
-                        spacing: Theme.spacingS
+                        spacing: Theme.spacingM
 
                         StyledText {
                             text: "Categories"
@@ -319,7 +319,7 @@ PluginComponent {
                             model: Object.keys(root.categories)
 
                             Row {
-                                spacing: Theme.spacingS
+                                spacing: Theme.spacingM
                                 StyledText {
                                     text: modelData
                                     color: Theme.surfaceText
@@ -352,7 +352,7 @@ PluginComponent {
                         id: todosColumn
                         anchors.fill: parent
                         anchors.margins: Theme.spacingL
-                        spacing: Theme.spacingS
+                        spacing: Theme.spacingM
 
                         StyledText {
                             text: "Todos (" + root.todos.length + ")"
@@ -365,7 +365,7 @@ PluginComponent {
                             model: root.todos
 
                             Row {
-                                spacing: Theme.spacingS
+                                spacing: Theme.spacingM
                                 DankIcon {
                                     name: modelData.done ? "check_box" : "check_box_outline_blank"
                                     color: modelData.done ? Theme.primary : Theme.surfaceText
