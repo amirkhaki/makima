@@ -128,26 +128,15 @@ func startDaemon() {
 	// Create rule engine
 	ruleEngine := engine.NewEngine(state)
 
-	// Load categories from config
+	// Load categories and rules from config
 	configDir := getConfigDir()
-	categoryLoader := dsl.NewCategoryLoader(configDir)
-	categories, err := categoryLoader.Load()
+	makimaFile, err := dsl.LoadConfigDir(configDir)
 	if err == nil {
-		ruleEngine.SetCategories(categories)
-	}
-
-	// Load rules from config
-	rulesFile := configDir + "/rules.makima"
-	if _, err := os.Stat(rulesFile); err == nil {
-		data, err := os.ReadFile(rulesFile)
-		if err == nil {
-			parser := dsl.NewParser(string(data))
-			rules, err := parser.Parse()
-			if err == nil {
-				for _, rule := range rules {
-					ruleEngine.AddRule(rule)
-				}
-			}
+		for k, v := range makimaFile.Categories {
+			ruleEngine.AddCategory(k, v)
+		}
+		for _, rule := range makimaFile.Rules {
+			ruleEngine.AddRule(rule)
 		}
 	}
 

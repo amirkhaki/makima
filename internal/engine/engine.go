@@ -35,6 +35,10 @@ func (e *Engine) SetCategories(categories map[string]*dsl.Category) {
 	e.categories = categories
 }
 
+func (e *Engine) AddCategory(name string, category *dsl.Category) {
+	e.categories[name] = category
+}
+
 func (e *Engine) GetCategories() map[string]*dsl.Category {
 	return e.categories
 }
