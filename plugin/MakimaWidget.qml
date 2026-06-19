@@ -125,64 +125,44 @@ PluginComponent {
     }
 
     horizontalBarPill: Component {
-        StyledRect {
-            width: content.implicitWidth + Theme.spacingS * 2
-            height: parent.widgetThickness
-            radius: Theme.cornerRadius
-            color: Theme.surfaceContainerHigh
-            clip: true
+        Row {
+            id: content
+            spacing: Theme.spacingXS
 
-            Row {
-                id: content
-                anchors.centerIn: parent
-                spacing: Theme.spacingXS
+            DankIcon {
+                name: root.statusIcon
+                color: root.isConnected ? Theme.primary : Theme.surfaceTextDim
+                size: Theme.iconSizeSmall
+                anchors.verticalCenter: parent.verticalCenter
+            }
 
-                DankIcon {
-                    name: root.statusIcon
-                    color: root.isConnected ? Theme.primary : Theme.surfaceTextDim
-                    size: Theme.iconSizeSmall
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-
-                StyledText {
-                    text: root.statusText
-                    color: Theme.surfaceText
-                    font.pixelSize: Theme.fontSizeSmall
-                    anchors.verticalCenter: parent.verticalCenter
-                    elide: Text.ElideRight
-                }
+            StyledText {
+                text: root.statusText
+                color: Theme.surfaceText
+                font.pixelSize: Theme.fontSizeSmall
+                anchors.verticalCenter: parent.verticalCenter
             }
         }
     }
 
     verticalBarPill: Component {
-        StyledRect {
-            width: parent.widgetThickness
-            height: content.implicitHeight + Theme.spacingS * 2
-            radius: Theme.cornerRadius
-            color: Theme.surfaceContainerHigh
-            clip: true
+        Column {
+            id: content
+            spacing: Theme.spacingXS
 
-            Column {
-                id: content
-                anchors.centerIn: parent
-                spacing: Theme.spacingXS
+            DankIcon {
+                name: root.statusIcon
+                color: root.isConnected ? Theme.primary : Theme.surfaceTextDim
+                size: Theme.iconSizeSmall
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
 
-                DankIcon {
-                    name: root.statusIcon
-                    color: root.isConnected ? Theme.primary : Theme.surfaceTextDim
-                    size: Theme.iconSizeSmall
-                    anchors.horizontalCenter: parent.horizontalCenter
-                }
-
-                StyledText {
-                    text: root.statusText
-                    color: Theme.surfaceText
-                    font.pixelSize: Theme.fontSizeTiny
-                    rotation: 90
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    elide: Text.ElideRight
-                }
+            StyledText {
+                text: root.statusText
+                color: Theme.surfaceText
+                font.pixelSize: Theme.fontSizeSmall
+                rotation: 90
+                anchors.horizontalCenter: parent.horizontalCenter
             }
         }
     }
