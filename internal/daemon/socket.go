@@ -3,9 +3,11 @@ package daemon
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"net"
 	"os"
 	"sync"
+	"syscall"
 )
 
 type Request struct {
@@ -24,24 +26,75 @@ type Handler func(req Request) Response
 
 type SocketServer struct {
 	sockPath string
+	lockPath string
 	listener net.Listener
 	handler  Handler
 	daemon   *Daemon
 	mu       sync.Mutex
+	lockFile *os.File
 }
 
 func NewSocketServer(sockPath string) (*SocketServer, error) {
+	lockPath := sockPath + ".lock"
+
+	// Try to acquire lock
+	lockFile, err := os.OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if err != nil {
+		if os.IsExist(err) {
+			// Check if the lock is stale (daemon crashed)
+			if isStaleLock(lockPath) {
+				os.Remove(lockPath)
+				lockFile, err = os.OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+				if err != nil {
+					return nil, fmt.Errorf("failed to acquire lock: %w", err)
+				}
+			} else {
+				return nil, fmt.Errorf("another daemon is already running (lock file: %s)", lockPath)
+			}
+		} else {
+			return nil, fmt.Errorf("failed to create lock file: %w", err)
+		}
+	}
+
+	// Write PID to lock file
+	fmt.Fprintf(lockFile, "%d", os.Getpid())
+	lockFile.Close()
+
+	// Remove existing socket
 	os.Remove(sockPath)
 
 	l, err := net.Listen("unix", sockPath)
 	if err != nil {
+		os.Remove(lockPath)
 		return nil, err
 	}
 
 	return &SocketServer{
 		sockPath: sockPath,
+		lockPath: lockPath,
 		listener: l,
 	}, nil
+}
+
+func isStaleLock(lockPath string) bool {
+	data, err := os.ReadFile(lockPath)
+	if err != nil {
+		return true
+	}
+
+	var pid int
+	if _, err := fmt.Sscanf(string(data), "%d", &pid); err != nil {
+		return true
+	}
+
+	// Check if process is still running
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		return true
+	}
+
+	err = process.Signal(syscall.Signal(0))
+	return err != nil
 }
 
 func (s *SocketServer) SetHandler(h Handler) {
@@ -111,5 +164,7 @@ func (s *SocketServer) handleConn(conn net.Conn) {
 }
 
 func (s *SocketServer) Close() error {
-	return s.listener.Close()
+	err := s.listener.Close()
+	os.Remove(s.lockPath)
+	return err
 }

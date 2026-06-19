@@ -90,7 +90,11 @@ func (t *ChromeTracker) scanAllTabs() {
 		return
 	}
 
-	pages := t.browser.MustPages()
+	pages, err := t.browser.Pages()
+	if err != nil {
+		fmt.Printf("Chrome tracker: failed to get pages: %v\n", err)
+		return
+	}
 	for _, page := range pages {
 		info, err := page.Info()
 		if err != nil {
