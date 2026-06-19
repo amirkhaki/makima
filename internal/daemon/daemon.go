@@ -8,6 +8,7 @@ import (
 
 	"github.com/amirkhaki/makima/internal/dsl"
 	"github.com/amirkhaki/makima/internal/engine"
+	"github.com/amirkhaki/makima/internal/log"
 	"github.com/amirkhaki/makima/internal/tracker"
 )
 
@@ -124,18 +125,25 @@ func (d *Daemon) eventChan(ctx context.Context) <-chan tracker.Event {
 }
 
 func (d *Daemon) handleEvent(event tracker.Event) {
+	log.Event("daemon", "event received: type=%s", event.Type)
+
 	ruleEvents := d.ruleEngine.Evaluate()
+	log.Event("daemon", "rule evaluation: %d rules matched", len(ruleEvents))
+
 	for _, re := range ruleEvents {
 		for _, action := range re.Actions {
+			log.Event("daemon", "executing action: %T", action)
 			result := d.actionExecutor.Execute(action)
 
 			// Send popup to connected clients
 			if popupAction, ok := action.(*dsl.PopupAction); ok {
+				log.Event("daemon", "sending popup: %s", popupAction.Message)
 				d.sendPopup(popupAction)
 			}
 
 			// Send result to connected clients
 			if result != nil {
+				log.Error("action failed: %v", result)
 				d.sendError(result.Error())
 			}
 		}

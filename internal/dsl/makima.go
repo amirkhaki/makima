@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/amirkhaki/makima/internal/log"
 )
 
 type MakimaFile struct {
@@ -330,26 +332,38 @@ func LoadConfigDir(dir string) (*MakimaFile, error) {
 		Rules:      []*Rule{},
 	}
 
+	log.Info("config: loading from %s", dir)
+
 	// Load categories.makima
 	catPath := filepath.Join(dir, "categories.makima")
 	if _, err := os.Stat(catPath); err == nil {
+		log.Info("config: loading categories from %s", catPath)
 		catFile, err := LoadMakimaFile(catPath)
 		if err != nil {
 			return nil, fmt.Errorf("categories: %w", err)
 		}
 		for k, v := range catFile.Categories {
 			file.Categories[k] = v
+			log.Info("config: category %s: %v", k, v.Patterns)
 		}
+	} else {
+		log.Info("config: no categories.makima found")
 	}
 
 	// Load rules.makima
 	rulesPath := filepath.Join(dir, "rules.makima")
 	if _, err := os.Stat(rulesPath); err == nil {
+		log.Info("config: loading rules from %s", rulesPath)
 		rulesFile, err := LoadMakimaFile(rulesPath)
 		if err != nil {
 			return nil, fmt.Errorf("rules: %w", err)
 		}
+		for _, rule := range rulesFile.Rules {
+			log.Info("config: rule loaded: condition=%T enabled=%v", rule.Condition, rule.Enabled)
+		}
 		file.Rules = append(file.Rules, rulesFile.Rules...)
+	} else {
+		log.Info("config: no rules.makima found")
 	}
 
 	return file, nil

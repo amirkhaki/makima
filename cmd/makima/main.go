@@ -12,6 +12,7 @@ import (
 	"github.com/amirkhaki/makima/internal/daemon"
 	"github.com/amirkhaki/makima/internal/dsl"
 	"github.com/amirkhaki/makima/internal/engine"
+	"github.com/amirkhaki/makima/internal/log"
 	"github.com/amirkhaki/makima/internal/tracker"
 	"github.com/amirkhaki/makima/internal/todo"
 )
@@ -94,8 +95,15 @@ Commands:
 
 func daemonCmd(args []string) {
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "Usage: makima daemon <start|stop|restart>")
+		fmt.Fprintln(os.Stderr, "Usage: makima daemon <start|stop|restart> [--verbose]")
 		os.Exit(1)
+	}
+
+	// Check for --verbose flag
+	for _, arg := range args {
+		if arg == "--verbose" || arg == "-v" {
+			log.SetVerbose(true)
+		}
 	}
 
 	switch args[0] {

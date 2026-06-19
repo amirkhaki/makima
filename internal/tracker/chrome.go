@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/amirkhaki/makima/internal/log"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
@@ -56,28 +57,38 @@ func (t *ChromeTracker) Name() string {
 }
 
 func (t *ChromeTracker) Start(ctx context.Context) error {
+	log.Info("chrome: reading port from %s", t.portFile)
+
 	port, err := t.readPort()
 	if err != nil {
-		fmt.Printf("Chrome tracker: %v\n", err)
-		fmt.Println("Chrome tracker: Running in passive mode (no browser control)")
+		log.Error("chrome: %v", err)
+		log.Info("chrome: running in passive mode (no browser control)")
 		return nil
 	}
+
+	log.Info("chrome: found port %d", port)
 
 	controlURL, err := launcher.ResolveURL(fmt.Sprintf("%d", port))
 	if err != nil {
-		fmt.Printf("Chrome tracker: failed to resolve control URL: %v\n", err)
+		log.Error("chrome: failed to resolve control URL: %v", err)
 		return nil
 	}
 
+	log.Info("chrome: connecting to %s", controlURL)
+
 	browser := rod.New().ControlURL(controlURL).NoDefaultDevice()
 	if err := browser.Connect(); err != nil {
-		fmt.Printf("Chrome tracker: failed to connect: %v\n", err)
+		log.Error("chrome: failed to connect: %v", err)
 		return nil
 	}
 	t.browser = browser
 
+	log.Info("chrome: connected, scanning initial tabs")
+
 	// Get initial state of all tabs
 	t.scanAllTabs()
+
+	log.Info("chrome: listening for navigation events")
 
 	// Subscribe to target info changed events (URL changes, title changes)
 	go t.listenEvents(ctx)
@@ -92,21 +103,26 @@ func (t *ChromeTracker) scanAllTabs() {
 
 	pages, err := t.browser.Pages()
 	if err != nil {
-		fmt.Printf("Chrome tracker: failed to get pages: %v\n", err)
+		log.Error("chrome: failed to get pages: %v", err)
 		return
 	}
+
+	log.Info("chrome: found %d pages", len(pages))
+
 	for _, page := range pages {
 		info, err := page.Info()
 		if err != nil {
 			continue
 		}
 		if info.Type == "page" {
-			t.updateTab(TabInfo{
+			tab := TabInfo{
 				ID:     string(info.TargetID),
 				URL:    info.URL,
 				Title:  info.Title,
 				Domain: extractDomain(info.URL),
-			})
+			}
+			log.Event("chrome", "initial tab: %s (%s)", tab.Domain, tab.URL)
+			t.updateTab(tab)
 		}
 	}
 }
@@ -115,6 +131,8 @@ func (t *ChromeTracker) listenEvents(ctx context.Context) {
 	if t.browser == nil {
 		return
 	}
+
+	log.Event("chrome", "subscribed to Target.targetInfoChanged events")
 
 	// Use EachEvent to listen for target info changes
 	wait := t.browser.EachEvent(func(e *proto.TargetTargetInfoChanged) {
@@ -126,27 +144,27 @@ func (t *ChromeTracker) listenEvents(ctx context.Context) {
 			return
 		}
 
-		t.updateTab(TabInfo{
+		tab := TabInfo{
 			ID:     string(e.TargetInfo.TargetID),
 			URL:    e.TargetInfo.URL,
 			Title:  e.TargetInfo.Title,
 			Domain: extractDomain(e.TargetInfo.URL),
-		})
+		}
+
+		log.Event("chrome", "navigation detected: %s (%s)", tab.Domain, tab.URL)
+
+		t.updateTab(tab)
 
 		t.events <- Event{
 			Type: "chrome",
-			Data: TabInfo{
-				ID:     string(e.TargetInfo.TargetID),
-				URL:    e.TargetInfo.URL,
-				Title:  e.TargetInfo.Title,
-				Domain: extractDomain(e.TargetInfo.URL),
-			},
+			Data: tab,
 		}
 	})
 
 	// Wait for context cancellation
 	<-ctx.Done()
 	wait()
+	log.Info("chrome: event listener stopped")
 }
 
 func (t *ChromeTracker) readPort() (int, error) {
@@ -175,6 +193,7 @@ func (t *ChromeTracker) readPort() (int, error) {
 }
 
 func (t *ChromeTracker) Stop() error {
+	log.Info("chrome: stopping (browser left running)")
 	t.browser = nil
 	return nil
 }
@@ -184,6 +203,7 @@ func (t *ChromeTracker) Events() <-chan Event {
 }
 
 func (t *ChromeTracker) updateTab(tab TabInfo) {
+	log.Debug("chrome", "state update: url=%s title=%s domain=%s", tab.URL, tab.Title, tab.Domain)
 	t.state.UpdateBrowser(BrowserState{
 		URL:      tab.URL,
 		TabTitle: tab.Title,
@@ -216,6 +236,7 @@ func (t *ChromeTracker) CloseTab(tabID string) error {
 			continue
 		}
 		if string(info.TargetID) == tabID {
+			log.Event("chrome", "closing tab: %s", tabID)
 			return page.Close()
 		}
 	}
@@ -229,6 +250,7 @@ func (t *ChromeTracker) Navigate(nurl string) error {
 
 	pages := t.browser.MustPages()
 	if len(pages) > 0 {
+		log.Event("chrome", "navigating to: %s", nurl)
 		return pages[0].Navigate(nurl)
 	}
 	return nil
