@@ -7,10 +7,10 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
+	"github.com/go-rod/rod/lib/proto"
 )
 
 type TabInfo struct {
@@ -21,10 +21,10 @@ type TabInfo struct {
 }
 
 type ChromeTracker struct {
-	events         chan Event
-	state          *State
-	browser        *rod.Browser
-	portFile       string
+	events   chan Event
+	state    *State
+	browser  *rod.Browser
+	portFile string
 }
 
 func NewChromeTracker(state *State) *ChromeTracker {
@@ -76,30 +76,73 @@ func (t *ChromeTracker) Start(ctx context.Context) error {
 	}
 	t.browser = browser
 
-	go func() {
-		ticker := time.NewTicker(time.Second)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				if t.browser != nil {
-					t.browser.MustClose()
-				}
-				return
-			case <-ticker.C:
-				tabs, err := t.getTabs()
-				if err != nil {
-					continue
-				}
-				for _, tab := range tabs {
-					t.updateTab(tab)
-					t.events <- Event{Type: "chrome", Data: tab}
-				}
-			}
-		}
-	}()
+	// Get initial state of all tabs
+	t.scanAllTabs()
+
+	// Subscribe to target info changed events (URL changes, title changes)
+	go t.listenEvents(ctx)
 
 	return nil
+}
+
+func (t *ChromeTracker) scanAllTabs() {
+	if t.browser == nil {
+		return
+	}
+
+	pages := t.browser.MustPages()
+	for _, page := range pages {
+		info, err := page.Info()
+		if err != nil {
+			continue
+		}
+		if info.Type == "page" {
+			t.updateTab(TabInfo{
+				ID:     string(info.TargetID),
+				URL:    info.URL,
+				Title:  info.Title,
+				Domain: extractDomain(info.URL),
+			})
+		}
+	}
+}
+
+func (t *ChromeTracker) listenEvents(ctx context.Context) {
+	if t.browser == nil {
+		return
+	}
+
+	// Use EachEvent to listen for target info changes
+	wait := t.browser.EachEvent(func(e *proto.TargetTargetInfoChanged) {
+		if e.TargetInfo == nil {
+			return
+		}
+		// Only track page targets (tabs)
+		if e.TargetInfo.Type != "page" {
+			return
+		}
+
+		t.updateTab(TabInfo{
+			ID:     string(e.TargetInfo.TargetID),
+			URL:    e.TargetInfo.URL,
+			Title:  e.TargetInfo.Title,
+			Domain: extractDomain(e.TargetInfo.URL),
+		})
+
+		t.events <- Event{
+			Type: "chrome",
+			Data: TabInfo{
+				ID:     string(e.TargetInfo.TargetID),
+				URL:    e.TargetInfo.URL,
+				Title:  e.TargetInfo.Title,
+				Domain: extractDomain(e.TargetInfo.URL),
+			},
+		}
+	})
+
+	// Wait for context cancellation
+	<-ctx.Done()
+	wait()
 }
 
 func (t *ChromeTracker) readPort() (int, error) {
@@ -128,43 +171,12 @@ func (t *ChromeTracker) readPort() (int, error) {
 }
 
 func (t *ChromeTracker) Stop() error {
-	// Don't close the browser - just stop monitoring
-	// The browser is managed by the user, not by makima
 	t.browser = nil
 	return nil
 }
 
 func (t *ChromeTracker) Events() <-chan Event {
 	return t.events
-}
-
-func (t *ChromeTracker) getTabs() ([]TabInfo, error) {
-	if t.browser == nil {
-		return nil, fmt.Errorf("browser not connected")
-	}
-
-	pages := t.browser.MustPages()
-	tabs := make([]TabInfo, 0, len(pages))
-
-	for _, page := range pages {
-		info, err := page.Info()
-		if err != nil {
-			continue
-		}
-
-		if info.Type != "page" {
-			continue
-		}
-
-		tabs = append(tabs, TabInfo{
-			ID:     string(info.TargetID),
-			URL:    info.URL,
-			Title:  info.Title,
-			Domain: extractDomain(info.URL),
-		})
-	}
-
-	return tabs, nil
 }
 
 func (t *ChromeTracker) updateTab(tab TabInfo) {
@@ -243,5 +255,27 @@ func (t *ChromeTracker) GetActiveTab() (*TabInfo, error) {
 }
 
 func (t *ChromeTracker) GetTabs() ([]TabInfo, error) {
-	return t.getTabs()
+	if t.browser == nil {
+		return nil, fmt.Errorf("browser not connected")
+	}
+
+	pages := t.browser.MustPages()
+	tabs := make([]TabInfo, 0, len(pages))
+
+	for _, page := range pages {
+		info, err := page.Info()
+		if err != nil {
+			continue
+		}
+		if info.Type == "page" {
+			tabs = append(tabs, TabInfo{
+				ID:     string(info.TargetID),
+				URL:    info.URL,
+				Title:  info.Title,
+				Domain: extractDomain(info.URL),
+			})
+		}
+	}
+
+	return tabs, nil
 }

@@ -10,11 +10,18 @@ import (
 func TestRuleEvaluation(t *testing.T) {
 	state := tracker.NewState()
 	state.UpdateBrowser(tracker.BrowserState{
-		URL:      "https://example.com",
-		Category: "games",
+		URL: "https://game.com/play",
 	})
 
 	eng := NewEngine(state)
+
+	// Load categories
+	eng.SetCategories(map[string]*dsl.Category{
+		"games": {
+			Name:     "games",
+			Patterns: []string{"*.game.com"},
+		},
+	})
 
 	rule := &dsl.Rule{
 		Trigger: dsl.TriggerWhen,
@@ -24,6 +31,7 @@ func TestRuleEvaluation(t *testing.T) {
 		Actions: []dsl.Action{
 			&dsl.HyprctlAction{Command: "dispatch workspace 2"},
 		},
+		Enabled: true,
 	}
 
 	eng.AddRule(rule)
