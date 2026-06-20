@@ -148,14 +148,15 @@ PluginComponent {
                     Item {
                         width: parent.width
                         height: 180
+                        clip: true
 
                         Shape {
                             id: countdownRing
                             anchors.centerIn: parent
                             width: 150
                             height: 150
-                            antialiasing: true
                             layer.enabled: true
+                            layer.samples: 8
 
                             ShapePath {
                                 strokeWidth: 10
