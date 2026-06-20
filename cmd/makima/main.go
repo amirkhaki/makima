@@ -152,7 +152,7 @@ func startDaemon() {
 	}
 
 	// Create daemon
-	d := daemon.NewDaemon(state, sessionMgr, actionExecutor, ruleEngine)
+	d := daemon.NewDaemon(state, sessionMgr, actionExecutor, ruleEngine, chrome)
 	d.AddTracker(hyprland)
 	d.AddTracker(chrome)
 
@@ -211,6 +211,17 @@ func handleRequest(req daemon.Request, state *tracker.State, ruleEngine *engine.
 				"running":   true,
 			},
 		}
+	case "budget.select":
+		var params struct {
+			Minutes int `json:"minutes"`
+		}
+		if err := json.Unmarshal(req.Params, &params); err != nil {
+			return daemon.Response{ID: req.ID, Error: err.Error()}
+		}
+		log.Event("daemon", "budget selected: %d minutes", params.Minutes)
+		// Store the budget for the current session
+		sessionMgr.SetBudget(params.Minutes)
+		return daemon.Response{ID: req.ID, Result: "ok"}
 	case "rule.list":
 		rules := ruleEngine.GetRules()
 		return daemon.Response{

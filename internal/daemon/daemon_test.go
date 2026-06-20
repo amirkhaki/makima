@@ -28,7 +28,7 @@ func TestDaemonEventLoop(t *testing.T) {
 		events: make(chan tracker.Event, 10),
 	}
 
-	d := NewDaemon(state, sessionMgr, actionExecutor, ruleEngine)
+	d := NewDaemon(state, sessionMgr, actionExecutor, ruleEngine, nil)
 	d.AddTracker(mock)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)

@@ -52,8 +52,9 @@ func (s *Session) InCooldown() bool {
 }
 
 type SessionManager struct {
-	mu       sync.RWMutex
-	sessions map[string]*Session
+	mu            sync.RWMutex
+	sessions      map[string]*Session
+	budgetMinutes int
 }
 
 func NewSessionManager() *SessionManager {
@@ -73,4 +74,19 @@ func (m *SessionManager) GetOrCreate(key string, grace, cooldown time.Duration) 
 	s := NewSession(key, grace, cooldown)
 	m.sessions[key] = s
 	return s
+}
+
+func (m *SessionManager) SetBudget(minutes int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Store budget in minutes for current session
+	// This will be used by the engine to schedule tab close
+	m.budgetMinutes = minutes
+}
+
+func (m *SessionManager) GetBudget() int {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.budgetMinutes
 }

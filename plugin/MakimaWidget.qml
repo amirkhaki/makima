@@ -12,6 +12,8 @@ PluginComponent {
 
     property string modalTitle: ""
     property string modalBody: ""
+    property bool budgetMode: false
+    property var budgetOptions: []
     property int countdownTotal: 0
     property real countdownStartTime: 0
     property real countdownElapsed: 0
@@ -35,7 +37,17 @@ PluginComponent {
                     if (msg.method === "popup") {
                         modalTitle = msg.params.title || "Warning"
                         modalBody = msg.params.message || ""
-                        countdownTotal = 30
+
+                        if (msg.params.budget) {
+                            budgetMode = true
+                            budgetOptions = msg.params.budget.options || [5, 15, 30]
+                            countdownTotal = msg.params.budget.grace || 30
+                        } else {
+                            budgetMode = false
+                            budgetOptions = []
+                            countdownTotal = 30
+                        }
+
                         countdownStartTime = Date.now()
                         countdownElapsed = 0
                         countdownTimer.restart()
@@ -46,6 +58,12 @@ PluginComponent {
                 }
             }
         }
+    }
+
+    function selectBudget(minutes) {
+        socket.send(JSON.stringify({method: "budget.select", params: {minutes: minutes}}))
+        modal.close()
+        budgetMode = false
     }
 
     Timer {
@@ -69,7 +87,11 @@ PluginComponent {
             if (countdownElapsed >= countdownTotal) {
                 countdownElapsed = countdownTotal
                 countdownTimer.stop()
-                modal.close()
+                if (budgetMode) {
+                    selectBudget(15)
+                } else {
+                    modal.close()
+                }
             }
         }
     }
@@ -81,14 +103,18 @@ PluginComponent {
         modalHeight: 450
         enableShadow: true
         closeOnEscapeKey: true
-        closeOnBackgroundClick: true
+        closeOnBackgroundClick: false
 
         onOpened: Qt.callLater(() => modalFocusScope.forceActiveFocus())
         onDialogClosed: countdownTimer.stop()
 
         modalFocusScope.Keys.onPressed: event => {
             if (event.key === Qt.Key_Escape || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                modal.close()
+                if (budgetMode) {
+                    selectBudget(15)
+                } else {
+                    modal.close()
+                }
                 event.accepted = true
             }
         }
@@ -146,6 +172,7 @@ PluginComponent {
                         lineHeight: 1.5
                     }
 
+                    // Countdown ring
                     Item {
                         width: parent.width
                         height: 200
@@ -210,7 +237,42 @@ PluginComponent {
 
                     Item { height: Theme.spacingS; width: 1 }
 
+                    // Budget options
+                    Row {
+                        visible: root.budgetMode
+                        spacing: Theme.spacingM
+                        anchors.horizontalCenter: parent.horizontalCenter
+
+                        Repeater {
+                            model: root.budgetOptions
+
+                            Rectangle {
+                                width: 80
+                                height: 40
+                                radius: 20
+                                color: Theme.primary
+
+                                StyledText {
+                                    text: modelData + "m"
+                                    font.pixelSize: Theme.fontSizeMedium
+                                    font.weight: Font.Medium
+                                    color: Theme.primaryText
+                                    anchors.centerIn: parent
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: root.selectBudget(modelData)
+                                }
+                            }
+                        }
+                    }
+
+                    // Dismiss button (non-budget mode)
                     Rectangle {
+                        visible: !root.budgetMode
                         width: 120
                         height: 40
                         radius: 20
