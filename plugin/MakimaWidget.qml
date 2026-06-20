@@ -154,6 +154,8 @@ PluginComponent {
                             anchors.centerIn: parent
                             width: 150
                             height: 150
+                            antialiasing: true
+                            layer.enabled: true
 
                             ShapePath {
                                 strokeWidth: 10
