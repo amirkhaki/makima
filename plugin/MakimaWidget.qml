@@ -243,22 +243,66 @@ PluginComponent {
                     Item { height: Theme.spacingS; width: 1 }
 
                     // Budget options
-                    Row {
+                    Column {
                         visible: root.budgetMode
                         spacing: Theme.spacingM
                         anchors.horizontalCenter: parent.horizontalCenter
 
-                        Repeater {
-                            model: root.budgetOptions
+                        Row {
+                            spacing: Theme.spacingM
+                            anchors.horizontalCenter: parent.horizontalCenter
+
+                            Repeater {
+                                model: root.budgetOptions
+
+                                Rectangle {
+                                    width: 80
+                                    height: 40
+                                    radius: 20
+                                    color: Theme.primary
+
+                                    StyledText {
+                                        text: modelData + "m"
+                                        font.pixelSize: Theme.fontSizeMedium
+                                        font.weight: Font.Medium
+                                        color: Theme.primaryText
+                                        anchors.centerIn: parent
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: root.selectBudget(modelData)
+                                    }
+                                }
+                            }
+                        }
+
+                        // Custom input row
+                        Row {
+                            spacing: Theme.spacingS
+                            anchors.horizontalCenter: parent.horizontalCenter
+
+                            DankTextField {
+                                id: customMinutesField
+                                width: 100
+                                placeholderText: "min"
+                                validator: IntValidator { bottom: 1; top: 180 }
+                                onAccepted: {
+                                    var val = parseInt(text)
+                                    if (val > 0) root.selectBudget(val)
+                                }
+                            }
 
                             Rectangle {
-                                width: 80
+                                width: 60
                                 height: 40
                                 radius: 20
                                 color: Theme.primary
 
                                 StyledText {
-                                    text: modelData + "m"
+                                    text: "OK"
                                     font.pixelSize: Theme.fontSizeMedium
                                     font.weight: Font.Medium
                                     color: Theme.primaryText
@@ -269,7 +313,10 @@ PluginComponent {
                                     anchors.fill: parent
                                     hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
-                                    onClicked: root.selectBudget(modelData)
+                                    onClicked: {
+                                        var val = parseInt(customMinutesField.text)
+                                        if (val > 0) root.selectBudget(val)
+                                    }
                                 }
                             }
                         }
