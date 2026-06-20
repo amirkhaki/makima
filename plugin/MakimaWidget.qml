@@ -65,7 +65,6 @@ PluginComponent {
         running: false
         onTriggered: {
             countdownElapsed = (Date.now() - countdownStartTime) / 1000
-            countdownCanvas.requestPaint()
             if (countdownElapsed >= countdownTotal) {
                 countdownElapsed = countdownTotal
                 countdownTimer.stop()
@@ -154,6 +153,13 @@ PluginComponent {
                             anchors.centerIn: parent
                             width: 150
                             height: 150
+
+                            Connections {
+                                target: root
+                                function onCountdownProgressChanged() {
+                                    countdownCanvas.requestPaint()
+                                }
+                            }
 
                             onPaint: {
                                 var ctx = getContext("2d")
