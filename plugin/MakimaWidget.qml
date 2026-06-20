@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Shapes
 import Quickshell
 import Quickshell.Io
 import qs.Common
@@ -117,7 +118,7 @@ PluginComponent {
                             DankIcon {
                                 name: "warning"
                                 size: 28
-                                color: Theme.onPrimaryContainer
+                                color: Theme.primary
                                 anchors.centerIn: parent
                             }
                         }
@@ -146,48 +147,48 @@ PluginComponent {
 
                     Item {
                         width: parent.width
-                        height: 150
+                        height: 180
 
-                        Canvas {
-                            id: countdownCanvas
+                        Shape {
+                            id: countdownRing
                             anchors.centerIn: parent
                             width: 150
                             height: 150
 
-                            Connections {
-                                target: root
-                                function onCountdownProgressChanged() {
-                                    countdownCanvas.requestPaint()
+                            ShapePath {
+                                strokeWidth: 10
+                                strokeColor: Theme.outlineVariant
+                                fillColor: "transparent"
+
+                                PathAngleArc {
+                                    centerX: countdownRing.width / 2
+                                    centerY: countdownRing.height / 2
+                                    radiusX: countdownRing.width / 2 - 5
+                                    radiusY: countdownRing.height / 2 - 5
+                                    startAngle: -90
+                                    sweepAngle: 360
                                 }
                             }
 
-                            onPaint: {
-                                var ctx = getContext("2d")
-                                ctx.reset()
+                            ShapePath {
+                                strokeWidth: 10
+                                strokeColor: Theme.primary
+                                fillColor: "transparent"
+                                capStyle: ShapePath.RoundCap
 
-                                var centerX = width / 2
-                                var centerY = height / 2
-                                var radius = width / 2 - 10
-
-                                // Background circle
-                                ctx.beginPath()
-                                ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
-                                ctx.strokeStyle = Qt.rgba(0.5, 0.5, 0.5, 0.3)
-                                ctx.lineWidth = 8
-                                ctx.stroke()
-
-                                // Progress arc
-                                ctx.beginPath()
-                                ctx.arc(centerX, centerY, radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * root.countdownProgress)
-                                ctx.strokeStyle = Theme.primary
-                                ctx.lineWidth = 8
-                                ctx.lineCap = "round"
-                                ctx.stroke()
+                                PathAngleArc {
+                                    centerX: countdownRing.width / 2
+                                    centerY: countdownRing.height / 2
+                                    radiusX: countdownRing.width / 2 - 5
+                                    radiusY: countdownRing.height / 2 - 5
+                                    startAngle: -90
+                                    sweepAngle: 360 * root.countdownProgress
+                                }
                             }
                         }
 
                         StyledText {
-                            anchors.centerIn: parent
+                            anchors.centerIn: countdownRing
                             text: root.countdownRemaining
                             font.pixelSize: Theme.fontSizeXLarge * 1.6
                             font.weight: Font.Bold
