@@ -67,13 +67,14 @@ func (a *ActionExecutor) executeHyprctl(action *dsl.HyprctlAction) error {
 }
 
 func (a *ActionExecutor) executePopup(action *dsl.PopupAction) error {
-	// Popup is handled by broadcasting to connected clients
-	// Just return nil here - the daemon broadcasts the popup
+	// Popup is handled by broadcasting to connected DMS plugin
+	// The plugin shows a modal popup
 	return nil
 }
 
 func (a *ActionExecutor) executeNotify(action *dsl.NotifyAction) error {
-	cmd := exec.Command("notify-send", action.Summary, action.Body)
+	// Use notify-send with full path for NixOS
+	cmd := exec.Command("/nix/store/l8x85xcfsgi94hxxv868id2j8n5lg74p-libnotify-0.8.8/bin/notify-send", action.Summary, action.Body)
 	return cmd.Run()
 }
 

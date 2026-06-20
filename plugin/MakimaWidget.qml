@@ -16,12 +16,6 @@ PluginComponent {
         return "check_circle"
     }
 
-    readonly property string statusText: {
-        if (!isConnected) return "Offline"
-        if (pendingPopup) return pendingPopup.message || "Action"
-        return "Live"
-    }
-
     DankSocket {
         id: socket
         path: "/tmp/makima.sock"
@@ -38,6 +32,7 @@ PluginComponent {
                     if (msg.method === "popup") {
                         root.pendingPopup = msg.params
                         popupTimer.restart()
+                        popupLoader.active = true
                     }
                 } catch (e) {}
             }
@@ -46,10 +41,79 @@ PluginComponent {
 
     Timer {
         id: popupTimer
-        interval: pendingPopup ? (pendingPopup.duration || 30000) : 30000
+        interval: 30000
         repeat: false
         onTriggered: {
             root.pendingPopup = null
+            popupLoader.active = false
+        }
+    }
+
+    Loader {
+        id: popupLoader
+        active: false
+        sourceComponent: Component {
+            Rectangle {
+                anchors.fill: parent
+                color: "#80000000"
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {} // don't close on click
+                }
+
+                StyledRect {
+                    width: 400
+                    height: popupCol.implicitHeight + Theme.spacingL * 4
+                    radius: Theme.cornerRadius
+                    color: Theme.surfaceContainer
+                    anchors.centerIn: parent
+                    border.color: Theme.error
+                    border.width: 2
+
+                    Column {
+                        id: popupCol
+                        anchors.centerIn: parent
+                        width: parent.width - Theme.spacingL * 4
+                        spacing: Theme.spacingM
+
+                        DankIcon {
+                            name: "warning"
+                            color: Theme.error
+                            size: 48
+                            anchors.horizontalCenter: parent.horizontalCenter
+                        }
+
+                        StyledText {
+                            text: root.pendingPopup ? root.pendingPopup.title || "Warning" : ""
+                            color: Theme.surfaceText
+                            font.pixelSize: Theme.fontSizeLarge
+                            font.bold: true
+                            anchors.horizontalCenter: parent.horizontalCenter
+                        }
+
+                        StyledText {
+                            text: root.pendingPopup ? root.pendingPopup.message || "" : ""
+                            color: Theme.surfaceText
+                            font.pixelSize: Theme.fontSizeMedium
+                            wrapMode: Text.WordWrap
+                            width: parent.width
+                            horizontalAlignment: Text.AlignHCenter
+                        }
+
+                        StyledText {
+                            text: {
+                                if (!root.pendingPopup) return ""
+                                var secs = Math.ceil(popupTimer.remainingTime / 1000)
+                                return "Action in " + secs + "s..."
+                            }
+                            color: Theme.surfaceTextDim
+                            font.pixelSize: Theme.fontSizeSmall
+                            anchors.horizontalCenter: parent.horizontalCenter
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -83,47 +147,13 @@ PluginComponent {
 
             Column {
                 width: parent.width
-                spacing: Theme.spacingM
-
                 visible: root.pendingPopup !== null
 
-                StyledRect {
-                    width: parent.width
-                    height: popupCol.implicitHeight + Theme.spacingL * 2
-                    radius: Theme.cornerRadius
-                    color: Theme.surfaceContainerHigh
-
-                    Column {
-                        id: popupCol
-                        anchors.fill: parent
-                        anchors.margins: Theme.spacingL
-                        spacing: Theme.spacingM
-
-                        StyledText {
-                            text: root.pendingPopup ? root.pendingPopup.title || "Warning" : ""
-                            color: Theme.surfaceText
-                            font.pixelSize: Theme.fontSizeLarge
-                            font.bold: true
-                        }
-
-                        StyledText {
-                            text: root.pendingPopup ? root.pendingPopup.message || "" : ""
-                            color: Theme.surfaceText
-                            font.pixelSize: Theme.fontSizeMedium
-                            wrapMode: Text.WordWrap
-                            width: parent.width
-                        }
-
-                        StyledText {
-                            text: {
-                                if (!root.pendingPopup) return ""
-                                var secs = Math.ceil(popupTimer.remainingTime / 1000)
-                                return "Action in " + secs + "s..."
-                            }
-                            color: Theme.surfaceTextDim
-                            font.pixelSize: Theme.fontSizeSmall
-                        }
-                    }
+                StyledText {
+                    text: root.pendingPopup ? root.pendingPopup.message || "" : ""
+                    color: Theme.surfaceText
+                    font.pixelSize: Theme.fontSizeMedium
+                    wrapMode: Text.WordWrap
                 }
             }
 
