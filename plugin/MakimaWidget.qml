@@ -1,56 +1,196 @@
 import QtQuick
+import Quickshell
 import Quickshell.Io
 import qs.Common
+import qs.Modals.Common
 import qs.Widgets
 import qs.Modules.Plugins
 
 PluginComponent {
     id: root
 
-    property bool isConnected: false
-    property var pendingPopup: null
-
-    readonly property string statusIcon: {
-        if (!isConnected) return "cloud_off"
-        if (pendingPopup) return "warning"
-        return "check_circle"
-    }
+    property string modalTitle: ""
+    property string modalBody: ""
+    property int countdownTotal: 0
+    property real countdownStartTime: 0
+    property real countdownElapsed: 0
+    property int countdownRemaining: Math.max(0, Math.ceil(countdownTotal - countdownElapsed))
 
     DankSocket {
         id: socket
         path: "/tmp/makima.sock"
 
         onConnectionStateChanged: {
-            root.isConnected = connected
+            console.log("Makima: socket connected:", connected)
         }
 
         parser: SplitParser {
             onRead: line => {
                 if (!line || line.length === 0) return
                 try {
-                    const msg = JSON.parse(line)
+                    var msg = JSON.parse(line)
+                    console.log("Makima: received:", line)
                     if (msg.method === "popup") {
-                        root.pendingPopup = msg.params
-                        popupTimer.restart()
+                        modalTitle = msg.params.title || "Warning"
+                        modalBody = msg.params.message || ""
+                        countdownTotal = 30
+                        countdownStartTime = Date.now()
+                        countdownElapsed = 0
+                        countdownTimer.restart()
+                        modal.open()
                     }
-                } catch (e) {}
+                } catch (e) {
+                    console.log("Makima: parse error:", e)
+                }
             }
         }
     }
 
     Timer {
-        id: popupTimer
-        interval: 30000
-        repeat: false
+        id: retryTimer
+        interval: 3000
+        repeat: true
+        running: !socket.connected
         onTriggered: {
-            root.pendingPopup = null
+            console.log("Makima: retrying connection")
+            socket.connected = true
+        }
+    }
+
+    Timer {
+        id: countdownTimer
+        interval: 100
+        repeat: true
+        running: false
+        onTriggered: {
+            countdownElapsed = (Date.now() - countdownStartTime) / 1000
+            if (countdownElapsed >= countdownTotal) {
+                countdownElapsed = countdownTotal
+                countdownTimer.stop()
+                modal.close()
+            }
+        }
+    }
+
+    DankModal {
+        id: modal
+
+        modalWidth: 400
+        enableShadow: true
+        closeOnEscapeKey: true
+        closeOnBackgroundClick: true
+
+        onOpened: Qt.callLater(() => modalFocusScope.forceActiveFocus())
+        onDialogClosed: countdownTimer.stop()
+
+        modalFocusScope.Keys.onPressed: event => {
+            if (event.key === Qt.Key_Escape || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                modal.close()
+                event.accepted = true
+            }
+        }
+
+        content: Component {
+            Item {
+                implicitHeight: contentColumn.implicitHeight
+
+                Column {
+                    id: contentColumn
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.margins: Theme.spacingXL
+                    spacing: Theme.spacingL
+
+                    Item {
+                        width: parent.width
+                        height: 64
+
+                        Rectangle {
+                            width: 56
+                            height: 56
+                            radius: 28
+                            anchors.centerIn: parent
+                            color: Theme.primaryContainer
+
+                            DankIcon {
+                                name: "warning"
+                                size: 28
+                                color: Theme.onPrimaryContainer
+                                anchors.centerIn: parent
+                            }
+                        }
+                    }
+
+                    StyledText {
+                        text: root.modalTitle
+                        font.pixelSize: Theme.fontSizeXLarge
+                        font.weight: Font.Bold
+                        color: Theme.surfaceText
+                        width: parent.width
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                    }
+
+                    StyledText {
+                        text: root.modalBody
+                        font.pixelSize: Theme.fontSizeMedium
+                        color: Theme.surfaceTextMedium
+                        width: parent.width
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                        visible: text.length > 0
+                        lineHeight: 1.5
+                    }
+
+                    Item {
+                        width: parent.width
+                        height: 40
+
+                        StyledText {
+                            anchors.centerIn: parent
+                            text: root.countdownRemaining + "s"
+                            font.pixelSize: Theme.fontSizeXLarge * 1.6
+                            font.weight: Font.Bold
+                            color: Theme.surfaceText
+                        }
+                    }
+
+                    Item { height: Theme.spacingS; width: 1 }
+
+                    Rectangle {
+                        width: 120
+                        height: 40
+                        radius: 20
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        color: Theme.primary
+
+                        StyledText {
+                            text: "Dismiss"
+                            font.pixelSize: Theme.fontSizeMedium
+                            font.weight: Font.Medium
+                            color: Theme.primaryText
+                            anchors.centerIn: parent
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: modal.close()
+                        }
+                    }
+
+                    Item { width: 1; height: Theme.spacingS }
+                }
+            }
         }
     }
 
     horizontalBarPill: Component {
         DankIcon {
-            name: root.statusIcon
-            color: root.isConnected ? Theme.primary : Theme.surfaceTextDim
+            name: "check_circle"
+            color: Theme.primary
             size: Theme.iconSizeSmall
             anchors.verticalCenter: parent.verticalCenter
         }
@@ -58,49 +198,15 @@ PluginComponent {
 
     verticalBarPill: Component {
         DankIcon {
-            name: root.statusIcon
-            color: root.isConnected ? Theme.primary : Theme.surfaceTextDim
+            name: "check_circle"
+            color: Theme.primary
             size: Theme.iconSizeSmall
             anchors.verticalCenter: parent ? parent.verticalCenter : undefined
         }
     }
 
-    popoutWidth: 350
-    popoutHeight: 200
-
-    popoutContent: Component {
-        PopoutComponent {
-            id: popout
-            headerText: "Makima"
-            detailsText: root.isConnected ? "Connected" : "Disconnected"
-            showCloseButton: true
-
-            Column {
-                width: parent.width
-                visible: root.pendingPopup !== null
-
-                StyledText {
-                    text: root.pendingPopup ? root.pendingPopup.message || "" : ""
-                    color: Theme.surfaceText
-                    font.pixelSize: Theme.fontSizeMedium
-                    wrapMode: Text.WordWrap
-                }
-            }
-
-            Column {
-                width: parent.width
-                visible: root.pendingPopup === null
-
-                StyledText {
-                    text: "No active rules"
-                    color: Theme.surfaceTextDim
-                    font.pixelSize: Theme.fontSizeMedium
-                }
-            }
-        }
-    }
-
     Component.onCompleted: {
+        console.log("Makima: widget loaded, connecting to socket")
         socket.connected = true
     }
 }
