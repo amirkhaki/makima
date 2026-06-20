@@ -1,34 +1,40 @@
 import QtQuick
 import Quickshell
-import Quickshell.Wayland
 import Quickshell.Io
 import qs.Common
-import qs.Widgets
+import qs.Modals.Common
 import qs.Modules.Plugins
+import qs.Widgets
 
 PluginComponent {
     id: root
 
-    property bool isConnected: false
-    property var pendingPopup: null
+    property string modalTitle: ""
+    property string modalBody: ""
+    property int countdownTotal: 0
+    property real countdownStartTime: 0
+    property real countdownElapsed: 0
+    property int countdownRemaining: Math.max(0, Math.ceil(countdownTotal - countdownElapsed))
+    property real countdownProgress: countdownTotal > 0 ? Math.max(0, Math.min(1, 1 - countdownElapsed / countdownTotal)) : 0
 
-    DankSocket {
+    Socket {
         id: socket
         path: "/tmp/makima.sock"
-
-        onConnectionStateChanged: {
-            root.isConnected = connected
-        }
+        connected: true
 
         parser: SplitParser {
             onRead: line => {
                 if (!line || line.length === 0) return
                 try {
-                    const msg = JSON.parse(line)
+                    var msg = JSON.parse(line)
                     if (msg.method === "popup") {
-                        root.pendingPopup = msg.params
-                        popupTimer.restart()
-                        popupWindowLoader.active = true
+                        modalTitle = msg.params.title || "Warning"
+                        modalBody = msg.params.message || ""
+                        countdownTotal = 30
+                        countdownStartTime = Date.now()
+                        countdownElapsed = 0
+                        countdownTimer.restart()
+                        modal.open()
                     }
                 } catch (e) {}
             }
@@ -36,94 +42,187 @@ PluginComponent {
     }
 
     Timer {
-        id: popupTimer
-        interval: 30000
-        repeat: false
+        id: retryTimer
+        interval: 3000
+        repeat: true
+        running: !socket.connected
+        onTriggered: socket.connected = true
+    }
+
+    Timer {
+        id: countdownTimer
+        interval: 100
+        repeat: true
+        running: false
         onTriggered: {
-            root.pendingPopup = null
-            popupWindowLoader.active = false
+            countdownElapsed = (Date.now() - countdownStartTime) / 1000
+            if (countdownElapsed >= countdownTotal) {
+                countdownElapsed = countdownTotal
+                countdownTimer.stop()
+                modal.close()
+            }
         }
     }
 
-    Loader {
-        id: popupWindowLoader
-        active: false
-        sourceComponent: Component {
-            PopupWindow {
-                id: popupWindow
-                visible: true
+    DankModal {
+        id: modal
 
-                WlrLayershell.layer: WlrLayer.Overlay
-                WlrLayershell.exclusiveZone: -1
-                WlrLayershell.namespace: "makima-popup"
-                WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
+        modalWidth: 400
+        enableShadow: true
+        closeOnEscapeKey: true
+        closeOnBackgroundClick: true
 
-                width: 400
-                height: popupCol.implicitHeight + Theme.spacingL * 4
-                color: "transparent"
+        onOpened: Qt.callLater(() => modalFocusScope.forceActiveFocus())
+        onClosed: countdownTimer.stop()
 
-                anchors.top: true
-                anchors.topMargin: 100
+        modalFocusScope.Keys.onPressed: event => {
+            if (event.key === Qt.Key_Escape || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                modal.close()
+                event.accepted = true
+            }
+        }
 
-                StyledRect {
-                    anchors.fill: parent
-                    anchors.margins: 1
-                    color: Theme.surfaceContainer
-                    radius: Theme.cornerRadius
-                    border.color: Theme.error
-                    border.width: 2
+        content: Component {
+            Item {
+                implicitHeight: contentColumn.implicitHeight
 
-                    Column {
-                        id: popupCol
-                        anchors.centerIn: parent
-                        width: parent.width - Theme.spacingL * 4
-                        spacing: Theme.spacingM
+                Column {
+                    id: contentColumn
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.margins: Theme.spacingXL
+                    spacing: Theme.spacingL
 
-                        DankIcon {
-                            name: "warning"
-                            color: Theme.error
-                            size: 48
-                            anchors.horizontalCenter: parent.horizontalCenter
-                        }
+                    Item {
+                        width: parent.width
+                        height: 64
 
-                        StyledText {
-                            text: root.pendingPopup ? root.pendingPopup.title || "Warning" : ""
-                            color: Theme.surfaceText
-                            font.pixelSize: Theme.fontSizeLarge
-                            font.bold: true
-                            anchors.horizontalCenter: parent.horizontalCenter
-                        }
+                        Rectangle {
+                            width: 56
+                            height: 56
+                            radius: 28
+                            anchors.centerIn: parent
+                            color: Theme.primaryContainer
 
-                        StyledText {
-                            text: root.pendingPopup ? root.pendingPopup.message || "" : ""
-                            color: Theme.surfaceText
-                            font.pixelSize: Theme.fontSizeMedium
-                            wrapMode: Text.WordWrap
-                            width: parent.width
-                            horizontalAlignment: Text.AlignHCenter
-                        }
-
-                        StyledText {
-                            text: {
-                                if (!root.pendingPopup) return ""
-                                var secs = Math.ceil(popupTimer.remainingTime / 1000)
-                                return "Action in " + secs + "s..."
+                            DankIcon {
+                                name: "warning"
+                                size: 28
+                                color: Theme.onPrimaryContainer
+                                anchors.centerIn: parent
                             }
-                            color: Theme.surfaceTextDim
-                            font.pixelSize: Theme.fontSizeSmall
-                            anchors.horizontalCenter: parent.horizontalCenter
                         }
                     }
-                }
 
-                Component.onCompleted: {
-                    popupTimer.restart()
+                    StyledText {
+                        text: root.modalTitle
+                        font.pixelSize: Theme.fontSizeXLarge
+                        font.weight: Font.Bold
+                        color: Theme.surfaceText
+                        width: parent.width
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                    }
+
+                    StyledText {
+                        text: root.modalBody
+                        font.pixelSize: Theme.fontSizeMedium
+                        color: Theme.surfaceTextMedium
+                        width: parent.width
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                        visible: text.length > 0
+                        lineHeight: 1.5
+                    }
+
+                    // Circular countdown ring
+                    Item {
+                        width: parent.width
+                        height: 180
+
+                        Shape {
+                            id: countdownRing
+                            anchors.centerIn: parent
+                            width: 150
+                            height: 150
+
+                            ShapePath {
+                                strokeWidth: 10
+                                strokeColor: Theme.outlineVariant
+                                fillColor: "transparent"
+
+                                PathAngleArc {
+                                    centerX: countdownRing.width / 2
+                                    centerY: countdownRing.height / 2
+                                    radiusX: countdownRing.width / 2 - 5
+                                    radiusY: countdownRing.height / 2 - 5
+                                    startAngle: -90
+                                    sweepAngle: 360
+                                }
+                            }
+
+                            ShapePath {
+                                strokeWidth: 10
+                                strokeColor: Theme.primary
+                                fillColor: "transparent"
+                                capStyle: ShapePath.RoundCap
+
+                                PathAngleArc {
+                                    centerX: countdownRing.width / 2
+                                    centerY: countdownRing.height / 2
+                                    radiusX: countdownRing.width / 2 - 5
+                                    radiusY: countdownRing.height / 2 - 5
+                                    startAngle: -90
+                                    sweepAngle: 360 * root.countdownProgress
+                                }
+                            }
+                        }
+
+                        StyledText {
+                            anchors.centerIn: countdownRing
+                            text: root.countdownRemaining
+                            font.pixelSize: Theme.fontSizeXLarge * 1.6
+                            font.weight: Font.Bold
+                            color: Theme.surfaceText
+                        }
+                    }
+
+                    Item { height: Theme.spacingS; width: 1 }
+
+                    Rectangle {
+                        width: 120
+                        height: 40
+                        radius: 20
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        color: Theme.primary
+
+                        StyledText {
+                            text: "Dismiss"
+                            font.pixelSize: Theme.fontSizeMedium
+                            font.weight: Font.Medium
+                            color: Theme.primaryText
+                            anchors.centerIn: parent
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: modal.close()
+                        }
+                    }
+
+                    Item { width: 1; height: Theme.spacingS }
                 }
             }
         }
     }
 
     Component.onCompleted: {
-        socket.connected = true
+        console.info("Makima: Started, waiting for commands on /tmp/makima.sock")
+    }
+
+    Component.onDestruction: {
+        console.info("Makima: Stopped")
     }
 }
