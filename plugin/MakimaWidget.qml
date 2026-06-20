@@ -26,6 +26,9 @@ PluginComponent {
 
         onConnectionStateChanged: {
             console.log("Makima: socket connected:", connected)
+            if (connected) {
+                retryTimer.stop()
+            }
         }
 
         parser: SplitParser {
@@ -68,12 +71,14 @@ PluginComponent {
 
     Timer {
         id: retryTimer
-        interval: 3000
+        interval: 2000
         repeat: true
-        running: !socket.connected
+        running: true
         onTriggered: {
-            console.log("Makima: retrying connection")
-            socket.connected = true
+            if (!socket.connected) {
+                console.log("Makima: attempting connection")
+                socket.connected = true
+            }
         }
     }
 
