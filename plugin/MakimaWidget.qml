@@ -77,7 +77,8 @@ PluginComponent {
     DankModal {
         id: modal
 
-        modalWidth: 400
+        modalWidth: 500
+        modalHeight: 450
         enableShadow: true
         closeOnEscapeKey: true
         closeOnBackgroundClick: true
@@ -147,55 +148,63 @@ PluginComponent {
 
                     Item {
                         width: parent.width
-                        height: 180
+                        height: 200
                         clip: true
 
-                        Shape {
-                            id: countdownRing
+                        Rectangle {
                             anchors.centerIn: parent
-                            width: 150
-                            height: 150
-                            layer.enabled: true
-                            layer.samples: 8
+                            width: 180
+                            height: 180
+                            radius: 90
+                            color: Theme.surfaceContainerHigh
 
-                            ShapePath {
-                                strokeWidth: 10
-                                strokeColor: Theme.outlineVariant
-                                fillColor: "transparent"
+                            Shape {
+                                id: countdownRing
+                                anchors.centerIn: parent
+                                width: 160
+                                height: 160
+                                layer.enabled: true
+                                layer.samples: 8
 
-                                PathAngleArc {
-                                    centerX: countdownRing.width / 2
-                                    centerY: countdownRing.height / 2
-                                    radiusX: countdownRing.width / 2 - 5
-                                    radiusY: countdownRing.height / 2 - 5
-                                    startAngle: -90
-                                    sweepAngle: 360
+                                ShapePath {
+                                    strokeWidth: 10
+                                    strokeColor: Theme.outlineVariant
+                                    fillColor: "transparent"
+
+                                    PathAngleArc {
+                                        centerX: countdownRing.width / 2
+                                        centerY: countdownRing.height / 2
+                                        radiusX: countdownRing.width / 2 - 5
+                                        radiusY: countdownRing.height / 2 - 5
+                                        startAngle: -90
+                                        sweepAngle: 360
+                                    }
+                                }
+
+                                ShapePath {
+                                    strokeWidth: 10
+                                    strokeColor: Theme.primary
+                                    fillColor: "transparent"
+                                    capStyle: ShapePath.RoundCap
+
+                                    PathAngleArc {
+                                        centerX: countdownRing.width / 2
+                                        centerY: countdownRing.height / 2
+                                        radiusX: countdownRing.width / 2 - 5
+                                        radiusY: countdownRing.height / 2 - 5
+                                        startAngle: -90
+                                        sweepAngle: 360 * root.countdownProgress
+                                    }
                                 }
                             }
 
-                            ShapePath {
-                                strokeWidth: 10
-                                strokeColor: Theme.primary
-                                fillColor: "transparent"
-                                capStyle: ShapePath.RoundCap
-
-                                PathAngleArc {
-                                    centerX: countdownRing.width / 2
-                                    centerY: countdownRing.height / 2
-                                    radiusX: countdownRing.width / 2 - 5
-                                    radiusY: countdownRing.height / 2 - 5
-                                    startAngle: -90
-                                    sweepAngle: 360 * root.countdownProgress
-                                }
+                            StyledText {
+                                anchors.centerIn: parent
+                                text: root.countdownRemaining
+                                font.pixelSize: Theme.fontSizeXLarge * 1.6
+                                font.weight: Font.Bold
+                                color: Theme.surfaceText
                             }
-                        }
-
-                        StyledText {
-                            anchors.centerIn: countdownRing
-                            text: root.countdownRemaining
-                            font.pixelSize: Theme.fontSizeXLarge * 1.6
-                            font.weight: Font.Bold
-                            color: Theme.surfaceText
                         }
                     }
 
