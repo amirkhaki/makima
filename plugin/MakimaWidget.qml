@@ -61,7 +61,7 @@ PluginComponent {
 
     Timer {
         id: countdownTimer
-        interval: 100
+        interval: 16
         repeat: true
         running: false
         onTriggered: {
