@@ -253,19 +253,43 @@ func parseAction(str string) (Action, error) {
 }
 
 func parsePopupAction(str string) (Action, error) {
-	// popup "Take a break!" for 30s
+	// popup "Take a break!" for 30s budget [5, 15, 30]
 	str = strings.TrimPrefix(str, "popup ")
 
 	// Extract message in quotes
-	msg, _ := extractQuoted(str)
+	msg, remaining := extractQuoted(str)
 	if msg == "" {
 		return nil, fmt.Errorf("popup requires a message")
 	}
 
-	return &PopupAction{
+	action := &PopupAction{
 		Title:   "Warning",
 		Message: msg,
-	}, nil
+	}
+
+	// Check for budget option
+	if strings.Contains(remaining, "budget") {
+		budgetIdx := strings.Index(remaining, "budget")
+		budgetStr := strings.TrimSpace(remaining[budgetIdx+6:])
+		// Parse budget options like [5, 15, 30]
+		if strings.HasPrefix(budgetStr, "[") && strings.HasSuffix(budgetStr, "]") {
+			budgetStr = budgetStr[1 : len(budgetStr)-1]
+			parts := strings.Split(budgetStr, ",")
+			var options []int
+			for _, p := range parts {
+				p = strings.TrimSpace(p)
+				var val int
+				if _, err := fmt.Sscanf(p, "%d", &val); err == nil {
+					options = append(options, val)
+				}
+			}
+			if len(options) > 0 {
+				action.Budget = options
+			}
+		}
+	}
+
+	return action, nil
 }
 
 func parseHyprctlAction(str string) (Action, error) {

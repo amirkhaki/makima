@@ -64,6 +64,7 @@ func (*HyprctlAction) actionNode() {}
 type PopupAction struct {
 	Title   string
 	Message string
+	Budget  []int
 }
 
 func (*PopupAction) actionNode() {}

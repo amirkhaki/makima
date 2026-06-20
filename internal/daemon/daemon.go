@@ -213,12 +213,21 @@ func (d *Daemon) evaluateAndExecute() {
 }
 
 func (d *Daemon) sendPopup(action *dsl.PopupAction) {
+	params := map[string]interface{}{
+		"title":   action.Title,
+		"message": action.Message,
+	}
+
+	if len(action.Budget) > 0 {
+		params["budget"] = map[string]interface{}{
+			"options": action.Budget,
+			"grace":   30,
+		}
+	}
+
 	msg := map[string]interface{}{
 		"method": "popup",
-		"params": map[string]interface{}{
-			"title":   action.Title,
-			"message": action.Message,
-		},
+		"params": params,
 	}
 	data, _ := json.Marshal(msg)
 	d.Broadcast(data)
