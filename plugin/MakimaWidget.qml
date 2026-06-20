@@ -15,6 +15,7 @@ PluginComponent {
     property real countdownStartTime: 0
     property real countdownElapsed: 0
     property int countdownRemaining: Math.max(0, Math.ceil(countdownTotal - countdownElapsed))
+    property real countdownProgress: countdownTotal > 0 ? Math.max(0, Math.min(1, 1 - countdownElapsed / countdownTotal)) : 0
 
     DankSocket {
         id: socket
@@ -64,6 +65,7 @@ PluginComponent {
         running: false
         onTriggered: {
             countdownElapsed = (Date.now() - countdownStartTime) / 1000
+            countdownCanvas.requestPaint()
             if (countdownElapsed >= countdownTotal) {
                 countdownElapsed = countdownTotal
                 countdownTimer.stop()
@@ -145,11 +147,42 @@ PluginComponent {
 
                     Item {
                         width: parent.width
-                        height: 40
+                        height: 150
+
+                        Canvas {
+                            id: countdownCanvas
+                            anchors.centerIn: parent
+                            width: 150
+                            height: 150
+
+                            onPaint: {
+                                var ctx = getContext("2d")
+                                ctx.reset()
+
+                                var centerX = width / 2
+                                var centerY = height / 2
+                                var radius = width / 2 - 10
+
+                                // Background circle
+                                ctx.beginPath()
+                                ctx.arc(centerX, centerY, radius, 0, Math.PI * 2)
+                                ctx.strokeStyle = Qt.rgba(0.5, 0.5, 0.5, 0.3)
+                                ctx.lineWidth = 8
+                                ctx.stroke()
+
+                                // Progress arc
+                                ctx.beginPath()
+                                ctx.arc(centerX, centerY, radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * root.countdownProgress)
+                                ctx.strokeStyle = Theme.primary
+                                ctx.lineWidth = 8
+                                ctx.lineCap = "round"
+                                ctx.stroke()
+                            }
+                        }
 
                         StyledText {
                             anchors.centerIn: parent
-                            text: root.countdownRemaining + "s"
+                            text: root.countdownRemaining
                             font.pixelSize: Theme.fontSizeXLarge * 1.6
                             font.weight: Font.Bold
                             color: Theme.surfaceText
