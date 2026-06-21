@@ -6,9 +6,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/amirkhaki/makima/internal/log"
 )
+
+var ruleCounter int
+var ruleCounterMu sync.Mutex
 
 type MakimaFile struct {
 	Categories map[string]*Category
@@ -205,22 +209,31 @@ func splitActions(str string) []string {
 	var current strings.Builder
 	inQuote := false
 
-	for _, ch := range str {
+	for i := 0; i < len(str); i++ {
+		ch := str[i]
+
 		if ch == '"' {
 			inQuote = !inQuote
-			current.WriteRune(ch)
+			current.WriteByte(ch)
 		} else if !inQuote && ch == ' ' {
-			word := current.String()
-			if word == "then" || word == "and" {
+			// Check if next word is "then" or "and"
+			remaining := str[i+1:]
+			if strings.HasPrefix(remaining, "then ") || strings.HasPrefix(remaining, "and ") {
 				if current.Len() > 0 {
 					parts = append(parts, current.String())
 				}
 				current.Reset()
+				// Skip past "then " or "and "
+				if strings.HasPrefix(remaining, "then ") {
+					i += 5
+				} else {
+					i += 4
+				}
 			} else {
-				current.WriteRune(ch)
+				current.WriteByte(ch)
 			}
 		} else {
-			current.WriteRune(ch)
+			current.WriteByte(ch)
 		}
 	}
 
@@ -409,9 +422,9 @@ func LoadConfigDir(dir string) (*MakimaFile, error) {
 	return file, nil
 }
 
-var ruleCounter int
-
 func generateRuleID() string {
+	ruleCounterMu.Lock()
+	defer ruleCounterMu.Unlock()
 	ruleCounter++
 	return fmt.Sprintf("rule-%d", ruleCounter)
 }
