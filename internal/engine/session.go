@@ -98,6 +98,11 @@ func (m *SessionManager) SetBudget(minutes int) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	if minutes <= 0 {
+		m.budget = nil
+		return
+	}
+
 	now := time.Now()
 	m.budget = &Budget{
 		Minutes:   minutes,

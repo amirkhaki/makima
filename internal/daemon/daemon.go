@@ -44,6 +44,8 @@ func NewDaemon(state *tracker.State, sessionMgr *engine.SessionManager, actionEx
 }
 
 func (d *Daemon) AddTracker(tracker Tracker) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
 	d.trackers = append(d.trackers, tracker)
 }
 

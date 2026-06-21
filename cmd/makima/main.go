@@ -270,6 +270,84 @@ func handleRequest(req daemon.Request, state *tracker.State, ruleEngine *engine.
 			ID:     req.ID,
 			Result: rules,
 		}
+	case "rule.add":
+		var params struct {
+			Name      string `json:"name"`
+			Condition string `json:"condition"`
+			Action    string `json:"action"`
+		}
+		if err := json.Unmarshal(req.Params, &params); err != nil {
+			return daemon.Response{ID: req.ID, Error: err.Error()}
+		}
+		// Parse the rule from condition and action
+		ruleStr := "when " + params.Condition + " then " + params.Action
+		file, err := dsl.ParseMakimaFile(ruleStr)
+		if err != nil {
+			return daemon.Response{ID: req.ID, Error: err.Error()}
+		}
+		if len(file.Rules) > 0 {
+			ruleEngine.AddRule(file.Rules[0])
+		}
+		return daemon.Response{ID: req.ID, Result: "ok"}
+	case "rule.remove":
+		var params struct {
+			ID string `json:"id"`
+		}
+		if err := json.Unmarshal(req.Params, &params); err != nil {
+			return daemon.Response{ID: req.ID, Error: err.Error()}
+		}
+		// TODO: implement rule removal by ID
+		return daemon.Response{ID: req.ID, Result: "ok"}
+	case "rule.enable":
+		var params struct {
+			ID string `json:"id"`
+		}
+		if err := json.Unmarshal(req.Params, &params); err != nil {
+			return daemon.Response{ID: req.ID, Error: err.Error()}
+		}
+		// TODO: implement rule enable by ID
+		return daemon.Response{ID: req.ID, Result: "ok"}
+	case "rule.disable":
+		var params struct {
+			ID string `json:"id"`
+		}
+		if err := json.Unmarshal(req.Params, &params); err != nil {
+			return daemon.Response{ID: req.ID, Error: err.Error()}
+		}
+		// TODO: implement rule disable by ID
+		return daemon.Response{ID: req.ID, Result: "ok"}
+	case "category.list":
+		categories := ruleEngine.GetCategories()
+		result := make(map[string][]string)
+		for name, cat := range categories {
+			result[name] = cat.Patterns
+		}
+		return daemon.Response{
+			ID:     req.ID,
+			Result: result,
+		}
+	case "category.add":
+		var params struct {
+			Name     string   `json:"name"`
+			Patterns []string `json:"patterns"`
+		}
+		if err := json.Unmarshal(req.Params, &params); err != nil {
+			return daemon.Response{ID: req.ID, Error: err.Error()}
+		}
+		ruleEngine.AddCategory(params.Name, &dsl.Category{
+			Name:     params.Name,
+			Patterns: params.Patterns,
+		})
+		return daemon.Response{ID: req.ID, Result: "ok"}
+	case "category.remove":
+		var params struct {
+			Name string `json:"name"`
+		}
+		if err := json.Unmarshal(req.Params, &params); err != nil {
+			return daemon.Response{ID: req.ID, Error: err.Error()}
+		}
+		// TODO: implement category removal
+		return daemon.Response{ID: req.ID, Result: "ok"}
 	case "todo.list":
 		store, err := todo.NewStore(getConfigDir() + "/todos.json")
 		if err != nil {

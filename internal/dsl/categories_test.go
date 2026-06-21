@@ -9,15 +9,8 @@ import (
 func TestCategoryLoader(t *testing.T) {
 	dir := t.TempDir()
 	catFile := filepath.Join(dir, "categories.makima")
-	content := `category games {
-  match "*.game.com"
-  match "*.io"
-}
-
-category social {
-  match "*.facebook.com"
-  match "*.twitter.com"
-}`
+	content := `category games: *.game.com, *.io
+category social: *.facebook.com, *.twitter.com`
 	if err := os.WriteFile(catFile, []byte(content), 0644); err != nil {
 		t.Fatal(err)
 	}

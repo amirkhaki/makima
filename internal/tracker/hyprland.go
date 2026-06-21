@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/amirkhaki/makima/internal/log"
 	"github.com/thiagokokada/hyprland-go"
 	"github.com/thiagokokada/hyprland-go/event"
 	"github.com/thiagokokada/hyprland-go/helpers"
@@ -59,8 +60,8 @@ func (t *HyprlandTracker) Start(ctx context.Context) error {
 
 	cli, err := event.NewClient(t.socket)
 	if err != nil {
-		fmt.Printf("Hyprland tracker: failed to create event client: %v\n", err)
-		return nil
+		log.Error("hyprland: failed to create event client: %v", err)
+		return err
 	}
 	t.eventCli = cli
 

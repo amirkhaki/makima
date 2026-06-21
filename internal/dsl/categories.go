@@ -52,8 +52,11 @@ func (cl *CategoryLoader) Load() (map[string]*Category, error) {
 		return nil, err
 	}
 
-	parser := NewParser(string(data))
-	return parser.ParseCategories()
+	file, err := ParseMakimaFile(string(data))
+	if err != nil {
+		return nil, err
+	}
+	return file.Categories, nil
 }
 
 func DefaultCategoryLoader() *CategoryLoader {
