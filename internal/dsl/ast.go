@@ -16,7 +16,6 @@ type Rule struct {
 	Actions   []Action
 	Grace     time.Duration
 	Cooldown  time.Duration
-	Budget    *BudgetConfig
 	Enabled   bool
 }
 
@@ -84,12 +83,6 @@ type ExecAction struct {
 }
 
 func (*ExecAction) actionNode() {}
-
-type BudgetConfig struct {
-	MaxPerHour  int
-	MaxPerDay   int
-	MaxPerWeek  int
-}
 
 type Category struct {
 	Name     string

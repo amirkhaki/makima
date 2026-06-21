@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
@@ -699,14 +699,6 @@ func logCmd(args []string) {
 		return
 	}
 
-	data, err := os.ReadFile(logPath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to read log: %v\n", err)
-		return
-	}
-
-	lines := strings.Split(string(data), "\n")
-	
 	// Show last N lines (default 50)
 	n := 50
 	if len(args) > 0 {
@@ -715,16 +707,15 @@ func logCmd(args []string) {
 		}
 	}
 
-	start := len(lines) - n
-	if start < 0 {
-		start = 0
+	// Use tail command for efficiency
+	cmd := exec.Command("tail", "-n", strconv.Itoa(n), logPath)
+	output, err := cmd.Output()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to read log: %v\n", err)
+		return
 	}
 
-	for _, line := range lines[start:] {
-		if line != "" {
-			fmt.Println(line)
-		}
-	}
+	fmt.Print(string(output))
 }
 
 func getConfigDir() string {
