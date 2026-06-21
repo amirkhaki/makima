@@ -2,7 +2,6 @@ package tracker
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"sync"
 	"time"
@@ -31,7 +30,7 @@ type HyprlandTracker struct {
 func NewHyprlandTracker(state *State) *HyprlandTracker {
 	socket, err := helpers.GetSocket(helpers.RequestSocket)
 	if err != nil {
-		fmt.Printf("Hyprland tracker: failed to get socket: %v\n", err)
+		log.Error("hyprland: failed to get socket: %v", err)
 		return &HyprlandTracker{
 			events: make(chan Event, 100),
 			state:  state,

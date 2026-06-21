@@ -33,7 +33,6 @@ type SocketServer struct {
 	handler  Handler
 	daemon   *Daemon
 	mu       sync.Mutex
-	lockFile *os.File
 }
 
 func NewSocketServer(sockPath string) (*SocketServer, error) {

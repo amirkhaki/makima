@@ -194,6 +194,8 @@ func (t *ChromeTracker) readPort() (int, error) {
 
 func (t *ChromeTracker) Stop() error {
 	log.Info("chrome: stopping (browser left running)")
+	// Don't close the browser - it's managed by the user
+	// Just disconnect from the CDP connection
 	t.browser = nil
 	return nil
 }
@@ -217,10 +219,10 @@ func extractDomain(rawURL string) string {
 		return ""
 	}
 	host := parsed.Hostname()
-	parts := strings.Split(host, ".")
-	if len(parts) > 2 {
-		return strings.Join(parts[len(parts)-2:], ".")
-	}
+	
+	// Handle multi-part TLDs like .co.uk, .com.au
+	// For simplicity, return the full hostname for now
+	// A more sophisticated approach would use a public suffix list
 	return host
 }
 

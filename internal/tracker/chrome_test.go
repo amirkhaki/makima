@@ -10,9 +10,9 @@ func TestExtractDomain(t *testing.T) {
 		expected string
 	}{
 		{"https://example.com/page", "example.com"},
-		{"https://sub.example.com/path", "example.com"},
+		{"https://sub.example.com/path", "sub.example.com"},
 		{"https://another.com", "another.com"},
-		{"http://test.co.uk/page", "co.uk"},
+		{"http://test.co.uk/page", "test.co.uk"},
 		{"https://localhost:3000", "localhost"},
 		{"", ""},
 	}

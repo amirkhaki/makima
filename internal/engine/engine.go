@@ -3,7 +3,6 @@ package engine
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/amirkhaki/makima/internal/dsl"
 	"github.com/amirkhaki/makima/internal/log"
@@ -216,7 +215,3 @@ func matchGlob(pattern, s string) bool {
 	return s == pattern
 }
 
-// Unused but available for future use
-func _() {
-	_ = time.Second
-}
