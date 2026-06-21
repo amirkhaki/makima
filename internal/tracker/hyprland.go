@@ -2,12 +2,14 @@ package tracker
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/thiagokokada/hyprland-go"
 	"github.com/thiagokokada/hyprland-go/event"
+	"github.com/thiagokokada/hyprland-go/helpers"
 )
 
 type Event struct {
@@ -20,15 +22,26 @@ type HyprlandTracker struct {
 	state      *State
 	requestCli *hyprland.RequestClient
 	eventCli   *event.EventClient
+	socket     string
 	mu         sync.Mutex
 	running    bool
 }
 
 func NewHyprlandTracker(state *State) *HyprlandTracker {
+	socket, err := helpers.GetSocket(helpers.RequestSocket)
+	if err != nil {
+		fmt.Printf("Hyprland tracker: failed to get socket: %v\n", err)
+		return &HyprlandTracker{
+			events: make(chan Event, 100),
+			state:  state,
+		}
+	}
+	cli := hyprland.NewClient(socket)
 	return &HyprlandTracker{
 		events:     make(chan Event, 100),
 		state:      state,
-		requestCli: hyprland.MustClient(),
+		requestCli: cli,
+		socket:     socket,
 	}
 }
 
@@ -44,7 +57,12 @@ func (t *HyprlandTracker) Start(ctx context.Context) error {
 		return nil
 	}
 
-	t.eventCli = event.MustClient()
+	cli, err := event.NewClient(t.socket)
+	if err != nil {
+		fmt.Printf("Hyprland tracker: failed to create event client: %v\n", err)
+		return nil
+	}
+	t.eventCli = cli
 
 	// Subscribe to events in a goroutine
 	go func() {

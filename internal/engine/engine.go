@@ -21,6 +21,7 @@ type Engine struct {
 	categories map[string]*dsl.Category
 	sessionMgr *SessionManager
 	triggered  map[*dsl.Rule]bool
+	lastURL    string
 }
 
 func NewEngine(state *tracker.State, sessionMgr *SessionManager) *Engine {
@@ -136,7 +137,20 @@ func (e *Engine) fireSession(rule *dsl.Rule) {
 
 func (e *Engine) resetTriggered() {
 	// Reset triggered flags when URL changes
-	// This is called on every evaluation
+	// This allows entering triggers to fire again for new URLs
+	browser := e.state.GetBrowser()
+	if browser.URL == "" {
+		return
+	}
+
+	// Simple heuristic: if URL changed, reset all triggered flags
+	// This could be made more sophisticated with domain tracking
+	if e.lastURL != "" && e.lastURL != browser.URL {
+		for rule := range e.triggered {
+			e.triggered[rule] = false
+		}
+	}
+	e.lastURL = browser.URL
 }
 
 func (e *Engine) updateCategory() {

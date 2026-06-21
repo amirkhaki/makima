@@ -9,7 +9,7 @@ import (
 var verbose bool
 
 func SetVerbose(v bool) {
-	verbose = true
+	verbose = v
 }
 
 func IsVerbose() bool {

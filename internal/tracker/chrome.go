@@ -229,7 +229,10 @@ func (t *ChromeTracker) CloseTab(tabID string) error {
 		return fmt.Errorf("browser not connected")
 	}
 
-	pages := t.browser.MustPages()
+	pages, err := t.browser.Pages()
+	if err != nil {
+		return err
+	}
 	for _, page := range pages {
 		info, err := page.Info()
 		if err != nil {
@@ -248,7 +251,10 @@ func (t *ChromeTracker) Navigate(nurl string) error {
 		return fmt.Errorf("browser not connected")
 	}
 
-	pages := t.browser.MustPages()
+	pages, err := t.browser.Pages()
+	if err != nil {
+		return err
+	}
 	if len(pages) > 0 {
 		log.Event("chrome", "navigating to: %s", nurl)
 		return pages[0].Navigate(nurl)
@@ -261,7 +267,10 @@ func (t *ChromeTracker) GetActiveTab() (*TabInfo, error) {
 		return nil, fmt.Errorf("browser not connected")
 	}
 
-	pages := t.browser.MustPages()
+	pages, err := t.browser.Pages()
+	if err != nil {
+		return nil, err
+	}
 	for _, page := range pages {
 		info, err := page.Info()
 		if err != nil {
@@ -285,7 +294,10 @@ func (t *ChromeTracker) GetTabs() ([]TabInfo, error) {
 		return nil, fmt.Errorf("browser not connected")
 	}
 
-	pages := t.browser.MustPages()
+	pages, err := t.browser.Pages()
+	if err != nil {
+		return nil, err
+	}
 	tabs := make([]TabInfo, 0, len(pages))
 
 	for _, page := range pages {

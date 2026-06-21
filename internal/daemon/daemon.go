@@ -158,11 +158,18 @@ func (d *Daemon) handleEvent(event tracker.Event) {
 	log.Event("daemon", "event received: type=%s", event.Type)
 
 	// When Hyprland detects browser window focus, poll CDP for active tab URL
+	// pollBrowserTab calls evaluateAndExecute internally
 	if event.Type == "window" {
 		d.pollBrowserTab()
+		return
 	}
 
+	// For other events (chrome navigation, etc), evaluate directly
 	ruleEvents := d.ruleEngine.Evaluate()
+	d.executeRuleEvents(ruleEvents)
+}
+
+func (d *Daemon) executeRuleEvents(ruleEvents []engine.RuleEvent) {
 	log.Event("daemon", "rule evaluation: %d rules matched", len(ruleEvents))
 
 	for _, re := range ruleEvents {
@@ -218,22 +225,7 @@ func (d *Daemon) pollBrowserTab() {
 
 func (d *Daemon) evaluateAndExecute() {
 	ruleEvents := d.ruleEngine.Evaluate()
-	for _, re := range ruleEvents {
-		for _, action := range re.Actions {
-			log.Event("daemon", "executing action: %T", action)
-			result := d.actionExecutor.Execute(action)
-
-			if popupAction, ok := action.(*dsl.PopupAction); ok {
-				log.Event("daemon", "sending popup: %s", popupAction.Message)
-				d.sendPopup(popupAction)
-			}
-
-			if result != nil {
-				log.Error("action failed: %v", result)
-				d.sendError(result.Error())
-			}
-		}
-	}
+	d.executeRuleEvents(ruleEvents)
 }
 
 func (d *Daemon) sendPopup(action *dsl.PopupAction) {
