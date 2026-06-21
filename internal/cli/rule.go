@@ -102,9 +102,10 @@ func (c *Client) send(method string, params any) (json.RawMessage, error) {
 }
 
 type RuleInfo struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Enabled bool   `json:"enabled"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Condition string `json:"condition"`
+	Enabled   bool   `json:"enabled"`
 }
 
 type AddRuleParams struct {

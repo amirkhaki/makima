@@ -475,7 +475,7 @@ func ruleCmd(args []string) {
 			os.Exit(1)
 		}
 		for i, rule := range rules {
-			fmt.Printf("%d. %s (enabled: %v)\n", i+1, rule.Name, rule.Enabled)
+			fmt.Printf("%d. %s (enabled: %v)\n", i+1, rule.Condition, rule.Enabled)
 		}
 	case "add":
 		if len(args) < 4 {
@@ -743,10 +743,14 @@ func newClient() (*cli.Client, error) {
 }
 
 var todoStore *todo.Store
+var todoStoreErr error
 
 func getTodoStore() *todo.Store {
 	if todoStore == nil {
-		todoStore, _ = todo.NewStore(getConfigDir() + "/todos.json")
+		todoStore, todoStoreErr = todo.NewStore(getConfigDir() + "/todos.json")
+		if todoStoreErr != nil {
+			log.Error("failed to load todo store: %v", todoStoreErr)
+		}
 	}
 	return todoStore
 }

@@ -116,10 +116,11 @@ func (d *Daemon) checkBudget() {
 		if d.chromeTracker != nil {
 			tabs, err := d.chromeTracker.GetTabs()
 			if err == nil && len(tabs) > 0 {
+				// Close the first tab (most likely the active one)
 				d.chromeTracker.CloseTab(tabs[0].ID)
 			}
 		}
-		// Reset budget
+		// Clear budget
 		d.sessionMgr.SetBudget(0)
 	}
 }
@@ -166,9 +167,11 @@ func (d *Daemon) handleEvent(event tracker.Event) {
 		return
 	}
 
-	// For other events (chrome navigation, etc), evaluate directly
-	ruleEvents := d.ruleEngine.Evaluate()
-	d.executeRuleEvents(ruleEvents)
+	// For chrome events, evaluate directly
+	if event.Type == "chrome" {
+		ruleEvents := d.ruleEngine.Evaluate()
+		d.executeRuleEvents(ruleEvents)
+	}
 }
 
 func (d *Daemon) executeRuleEvents(ruleEvents []engine.RuleEvent) {
@@ -210,6 +213,7 @@ func (d *Daemon) pollBrowserTab() {
 	}
 
 	// Find the tab with the most recent URL (active tab)
+	// The first tab is typically the active one in Chrome/Brave
 	for _, tab := range tabs {
 		if browser.URL != tab.URL {
 			log.Event("daemon", "browser tab detected: %s (%s)", tab.Domain, tab.URL)

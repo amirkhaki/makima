@@ -193,10 +193,11 @@ func (t *ChromeTracker) readPort() (int, error) {
 }
 
 func (t *ChromeTracker) Stop() error {
-	log.Info("chrome: stopping (browser left running)")
-	// Don't close the browser - it's managed by the user
-	// Just disconnect from the CDP connection
-	t.browser = nil
+	log.Info("chrome: stopping")
+	if t.browser != nil {
+		t.browser.Close()
+		t.browser = nil
+	}
 	return nil
 }
 
