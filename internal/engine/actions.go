@@ -54,7 +54,10 @@ func (a *ActionExecutor) executeCDP(action *dsl.CDPAction) error {
 		}
 		return fmt.Errorf("no tabs to close")
 	case "navigate":
-		return a.chrome.Navigate("")
+		if action.Target == "" {
+			return fmt.Errorf("navigate requires a URL")
+		}
+		return a.chrome.Navigate(action.Target)
 	default:
 		return fmt.Errorf("unknown CDP command: %s", action.Command)
 	}

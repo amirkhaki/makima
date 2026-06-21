@@ -111,22 +111,24 @@ func (t *HyprlandTracker) Events() <-chan Event {
 }
 
 func (t *HyprlandTracker) updateState() {
+	// Get current state to merge with
+	current := t.state.GetHyprland()
+
 	// Get active workspace
 	ws, err := t.requestCli.ActiveWorkspace()
 	if err == nil {
-		t.state.UpdateHyprland(HyprlandState{
-			ActiveWorkspace: ws.Id,
-		})
+		current.ActiveWorkspace = ws.Id
 	}
 
 	// Get active window
 	window, err := t.requestCli.ActiveWindow()
 	if err == nil {
-		t.state.UpdateHyprland(HyprlandState{
-			WindowClass: window.Class,
-			WindowTitle: window.Title,
-		})
+		current.WindowClass = window.Class
+		current.WindowTitle = window.Title
 	}
+
+	// Update merged state
+	t.state.UpdateHyprland(current)
 }
 
 type hyprlandHandler struct {

@@ -37,6 +37,12 @@ func (e *Engine) AddRule(rule *dsl.Rule) {
 	e.rules = append(e.rules, rule)
 }
 
+func (e *Engine) RemoveRule(index int) {
+	if index >= 0 && index < len(e.rules) {
+		e.rules = append(e.rules[:index], e.rules[index+1:]...)
+	}
+}
+
 func (e *Engine) GetRules() []*dsl.Rule {
 	return e.rules
 }
@@ -51,6 +57,10 @@ func (e *Engine) SetCategories(categories map[string]*dsl.Category) {
 func (e *Engine) AddCategory(name string, category *dsl.Category) {
 	log.Event("engine", "category loaded: %s -> %v", name, category.Patterns)
 	e.categories[name] = category
+}
+
+func (e *Engine) RemoveCategory(name string) {
+	delete(e.categories, name)
 }
 
 func (e *Engine) GetCategories() map[string]*dsl.Category {

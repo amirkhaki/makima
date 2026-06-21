@@ -296,8 +296,15 @@ func handleRequest(req daemon.Request, state *tracker.State, ruleEngine *engine.
 		if err := json.Unmarshal(req.Params, &params); err != nil {
 			return daemon.Response{ID: req.ID, Error: err.Error()}
 		}
-		// TODO: implement rule removal by ID
-		return daemon.Response{ID: req.ID, Result: "ok"}
+		// Find and remove rule by ID
+		rules := ruleEngine.GetRules()
+		for i, rule := range rules {
+			if rule.ID == params.ID {
+				ruleEngine.RemoveRule(i)
+				return daemon.Response{ID: req.ID, Result: "ok"}
+			}
+		}
+		return daemon.Response{ID: req.ID, Error: "rule not found"}
 	case "rule.enable":
 		var params struct {
 			ID string `json:"id"`
@@ -305,8 +312,15 @@ func handleRequest(req daemon.Request, state *tracker.State, ruleEngine *engine.
 		if err := json.Unmarshal(req.Params, &params); err != nil {
 			return daemon.Response{ID: req.ID, Error: err.Error()}
 		}
-		// TODO: implement rule enable by ID
-		return daemon.Response{ID: req.ID, Result: "ok"}
+		// Find and enable rule by ID
+		rules := ruleEngine.GetRules()
+		for _, rule := range rules {
+			if rule.ID == params.ID {
+				rule.Enabled = true
+				return daemon.Response{ID: req.ID, Result: "ok"}
+			}
+		}
+		return daemon.Response{ID: req.ID, Error: "rule not found"}
 	case "rule.disable":
 		var params struct {
 			ID string `json:"id"`
@@ -314,8 +328,15 @@ func handleRequest(req daemon.Request, state *tracker.State, ruleEngine *engine.
 		if err := json.Unmarshal(req.Params, &params); err != nil {
 			return daemon.Response{ID: req.ID, Error: err.Error()}
 		}
-		// TODO: implement rule disable by ID
-		return daemon.Response{ID: req.ID, Result: "ok"}
+		// Find and disable rule by ID
+		rules := ruleEngine.GetRules()
+		for _, rule := range rules {
+			if rule.ID == params.ID {
+				rule.Enabled = false
+				return daemon.Response{ID: req.ID, Result: "ok"}
+			}
+		}
+		return daemon.Response{ID: req.ID, Error: "rule not found"}
 	case "category.list":
 		categories := ruleEngine.GetCategories()
 		result := make(map[string][]string)
@@ -346,13 +367,10 @@ func handleRequest(req daemon.Request, state *tracker.State, ruleEngine *engine.
 		if err := json.Unmarshal(req.Params, &params); err != nil {
 			return daemon.Response{ID: req.ID, Error: err.Error()}
 		}
-		// TODO: implement category removal
+		ruleEngine.RemoveCategory(params.Name)
 		return daemon.Response{ID: req.ID, Result: "ok"}
 	case "todo.list":
-		store, err := todo.NewStore(getConfigDir() + "/todos.json")
-		if err != nil {
-			return daemon.Response{ID: req.ID, Error: err.Error()}
-		}
+		store := getTodoStore()
 		todos := store.List()
 		return daemon.Response{
 			ID:     req.ID,
@@ -366,10 +384,7 @@ func handleRequest(req daemon.Request, state *tracker.State, ruleEngine *engine.
 		if err := json.Unmarshal(req.Params, &params); err != nil {
 			return daemon.Response{ID: req.ID, Error: err.Error()}
 		}
-		store, err := todo.NewStore(getConfigDir() + "/todos.json")
-		if err != nil {
-			return daemon.Response{ID: req.ID, Error: err.Error()}
-		}
+		store := getTodoStore()
 		parentID := ""
 		if params.ParentID != nil {
 			parentID = *params.ParentID
@@ -389,10 +404,7 @@ func handleRequest(req daemon.Request, state *tracker.State, ruleEngine *engine.
 		if err := json.Unmarshal(req.Params, &params); err != nil {
 			return daemon.Response{ID: req.ID, Error: err.Error()}
 		}
-		store, err := todo.NewStore(getConfigDir() + "/todos.json")
-		if err != nil {
-			return daemon.Response{ID: req.ID, Error: err.Error()}
-		}
+		store := getTodoStore()
 		if err := store.Complete(params.ID); err != nil {
 			return daemon.Response{ID: req.ID, Error: err.Error()}
 		}
@@ -404,10 +416,7 @@ func handleRequest(req daemon.Request, state *tracker.State, ruleEngine *engine.
 		if err := json.Unmarshal(req.Params, &params); err != nil {
 			return daemon.Response{ID: req.ID, Error: err.Error()}
 		}
-		store, err := todo.NewStore(getConfigDir() + "/todos.json")
-		if err != nil {
-			return daemon.Response{ID: req.ID, Error: err.Error()}
-		}
+		store := getTodoStore()
 		if err := store.Remove(params.ID); err != nil {
 			return daemon.Response{ID: req.ID, Error: err.Error()}
 		}
@@ -740,4 +749,13 @@ func getSocketPath() string {
 
 func newClient() (*cli.Client, error) {
 	return cli.NewClient(getSocketPath())
+}
+
+var todoStore *todo.Store
+
+func getTodoStore() *todo.Store {
+	if todoStore == nil {
+		todoStore, _ = todo.NewStore(getConfigDir() + "/todos.json")
+	}
+	return todoStore
 }

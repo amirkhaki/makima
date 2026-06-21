@@ -10,6 +10,7 @@ const (
 )
 
 type Rule struct {
+	ID        string
 	Trigger   Trigger
 	Condition Condition
 	Actions   []Action
@@ -51,6 +52,7 @@ type Action interface {
 
 type CDPAction struct {
 	Command string
+	Target  string
 }
 
 func (*CDPAction) actionNode() {}

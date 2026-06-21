@@ -77,7 +77,10 @@ func parseCategoryLine(line string) (*Category, error) {
 }
 
 func parseRuleLine(line string) (*Rule, error) {
-	rule := &Rule{Enabled: true}
+	rule := &Rule{
+		Enabled: true,
+		ID:      generateRuleID(),
+	}
 
 	// Parse trigger
 	if strings.HasPrefix(line, "entering ") {
@@ -332,13 +335,21 @@ func parseExecAction(str string) (Action, error) {
 
 func parseCDPAction(str string) (Action, error) {
 	// cdp close-tab
+	// cdp navigate "https://example.com"
 	str = strings.TrimPrefix(str, "cdp ")
 	parts := strings.Fields(str)
 	if len(parts) == 0 {
 		return nil, fmt.Errorf("cdp requires a command")
 	}
 
-	return &CDPAction{Command: parts[0]}, nil
+	target := ""
+	if len(parts) > 1 {
+		target = parts[1]
+		// Remove quotes if present
+		target = strings.Trim(target, "\"")
+	}
+
+	return &CDPAction{Command: parts[0], Target: target}, nil
 }
 
 func extractQuoted(str string) (string, string) {
@@ -396,4 +407,11 @@ func LoadConfigDir(dir string) (*MakimaFile, error) {
 	}
 
 	return file, nil
+}
+
+var ruleCounter int
+
+func generateRuleID() string {
+	ruleCounter++
+	return fmt.Sprintf("rule-%d", ruleCounter)
 }

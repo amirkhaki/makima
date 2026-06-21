@@ -6,6 +6,7 @@ import (
 )
 
 type Session struct {
+	mu        sync.RWMutex
 	key       string
 	grace     time.Duration
 	cooldown  time.Duration
@@ -26,10 +27,14 @@ func NewSession(key string, grace, cooldown time.Duration) *Session {
 }
 
 func (s *Session) Key() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.key
 }
 
 func (s *Session) InGrace() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	if !s.inGrace {
 		return false
 	}
@@ -37,11 +42,15 @@ func (s *Session) InGrace() bool {
 }
 
 func (s *Session) FireAction() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.fired = time.Now()
 	s.inGrace = false
 }
 
 func (s *Session) InCooldown() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	if s.cooldown == 0 {
 		return false
 	}
