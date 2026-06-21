@@ -73,8 +73,13 @@ func (a *ActionExecutor) executePopup(action *dsl.PopupAction) error {
 }
 
 func (a *ActionExecutor) executeNotify(action *dsl.NotifyAction) error {
-	// Use notify-send with full path for NixOS
-	cmd := exec.Command("/nix/store/l8x85xcfsgi94hxxv868id2j8n5lg74p-libnotify-0.8.8/bin/notify-send", action.Summary, action.Body)
+	// Try to find notify-send in PATH
+	path, err := exec.LookPath("notify-send")
+	if err != nil {
+		// Fallback to common NixOS path
+		path = "/run/current-system/sw/bin/notify-send"
+	}
+	cmd := exec.Command(path, action.Summary, action.Body)
 	return cmd.Run()
 }
 

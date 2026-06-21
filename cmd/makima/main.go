@@ -308,14 +308,21 @@ func statusCmd(args []string) {
 	}
 	defer client.Close()
 
-	status, err := client.RuleList()
+	status, err := client.Status()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to get status: %v\n", err)
 		os.Exit(1)
 	}
 
 	fmt.Printf("Makima %s\n", version)
-	fmt.Printf("Rules: %d\n", len(status))
+	fmt.Printf("Running: %v\n", status["running"])
+	if browser, ok := status["browser"].(map[string]interface{}); ok {
+		fmt.Printf("Browser URL: %v\n", browser["url"])
+		fmt.Printf("Browser Category: %v\n", browser["category"])
+	}
+	if hyprland, ok := status["hyprland"].(map[string]interface{}); ok {
+		fmt.Printf("Window: %v\n", hyprland["windowClass"])
+	}
 }
 
 func ruleCmd(args []string) {

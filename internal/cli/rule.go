@@ -173,3 +173,17 @@ func (c *Client) RuleDisable(id string) error {
 	_, err := c.send("rule.disable", params)
 	return err
 }
+
+func (c *Client) Status() (map[string]interface{}, error) {
+	result, err := c.send("status", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var status map[string]interface{}
+	if err := json.Unmarshal(result, &status); err != nil {
+		return nil, fmt.Errorf("invalid response: %w", err)
+	}
+
+	return status, nil
+}
