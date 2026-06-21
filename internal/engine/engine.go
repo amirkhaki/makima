@@ -202,18 +202,16 @@ func (e *Engine) evaluateCondition(cond dsl.Condition) bool {
 }
 
 func matchGlob(pattern, s string) bool {
-	// Simple glob matching: * matches any sequence of characters
+	// Use the same glob matching as categories.go for consistency
+	if pattern == "" {
+		return s == ""
+	}
 	if pattern == "*" {
 		return true
 	}
-	if strings.HasPrefix(pattern, "*") && strings.HasSuffix(pattern, "*") {
-		return strings.Contains(s, pattern[1:len(pattern)-1])
-	}
-	if strings.HasPrefix(pattern, "*") {
-		return strings.HasSuffix(s, pattern[1:])
-	}
-	if strings.HasSuffix(pattern, "*") {
-		return strings.HasPrefix(s, pattern[:len(pattern)-1])
+	if strings.HasPrefix(pattern, "*.") {
+		suffix := pattern[1:]
+		return s == suffix[1:] || strings.HasSuffix(s, suffix)
 	}
 	return s == pattern
 }

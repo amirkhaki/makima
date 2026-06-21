@@ -68,7 +68,9 @@ func (a *ActionExecutor) executeHyprctl(action *dsl.HyprctlAction) error {
 
 func (a *ActionExecutor) executePopup(action *dsl.PopupAction) error {
 	// Popup is handled by broadcasting to connected DMS plugin
-	// The plugin shows a modal popup
+	// The daemon broadcasts the popup message via sendPopup()
+	// This method is called for consistency but the actual popup
+	// delivery happens in daemon.executeRuleEvents()
 	return nil
 }
 
