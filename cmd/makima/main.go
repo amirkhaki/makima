@@ -6,7 +6,11 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"syscall"
+	"time"
 
 	"github.com/amirkhaki/makima/internal/cli"
 	"github.com/amirkhaki/makima/internal/daemon"
@@ -110,13 +114,51 @@ func daemonCmd(args []string) {
 	case "start":
 		startDaemon()
 	case "stop":
-		fmt.Println("daemon: stop - not implemented yet")
+		stopDaemon()
 	case "restart":
-		fmt.Println("daemon: restart - not implemented yet")
+		restartDaemon()
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown daemon subcommand: %s\n", args[0])
 		os.Exit(1)
 	}
+}
+
+func stopDaemon() {
+	sockPath := getSocketPath()
+	lockPath := sockPath + ".lock"
+
+	// Read PID from lock file
+	data, err := os.ReadFile(lockPath)
+	if err != nil {
+		fmt.Println("No daemon running (no lock file)")
+		return
+	}
+
+	var pid int
+	if _, err := fmt.Sscanf(string(data), "%d", &pid); err != nil {
+		fmt.Println("Invalid lock file")
+		return
+	}
+
+	// Send SIGTERM to daemon
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		fmt.Println("Daemon process not found")
+		return
+	}
+
+	if err := process.Signal(syscall.SIGTERM); err != nil {
+		fmt.Printf("Failed to stop daemon: %v\n", err)
+		return
+	}
+
+	fmt.Println("Daemon stopped")
+}
+
+func restartDaemon() {
+	stopDaemon()
+	time.Sleep(1 * time.Second)
+	startDaemon()
 }
 
 func startDaemon() {
@@ -520,11 +562,82 @@ func todoCmd(args []string) {
 }
 
 func configCmd(args []string) {
-	fmt.Println("config: not implemented yet")
+	configDir := getConfigDir()
+	
+	if len(args) == 0 {
+		// Show config directory contents
+		fmt.Printf("Config directory: %s\n", configDir)
+		entries, err := os.ReadDir(configDir)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to read config: %v\n", err)
+			return
+		}
+		for _, entry := range entries {
+			info, _ := entry.Info()
+			fmt.Printf("  %s (%d bytes)\n", entry.Name(), info.Size())
+		}
+		return
+	}
+
+	switch args[0] {
+	case "path":
+		fmt.Println(configDir)
+	case "categories":
+		catPath := filepath.Join(configDir, "categories.makima")
+		data, err := os.ReadFile(catPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to read categories: %v\n", err)
+			return
+		}
+		fmt.Print(string(data))
+	case "rules":
+		rulesPath := filepath.Join(configDir, "rules.makima")
+		data, err := os.ReadFile(rulesPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to read rules: %v\n", err)
+			return
+		}
+		fmt.Print(string(data))
+	default:
+		fmt.Fprintf(os.Stderr, "Unknown config subcommand: %s\n", args[0])
+		fmt.Println("Usage: makima config [path|categories|rules]")
+	}
 }
 
 func logCmd(args []string) {
-	fmt.Println("log: not implemented yet")
+	logPath := "/tmp/makima.log"
+	
+	if _, err := os.Stat(logPath); os.IsNotExist(err) {
+		fmt.Println("No log file found. Start daemon with: makima daemon start --verbose")
+		return
+	}
+
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to read log: %v\n", err)
+		return
+	}
+
+	lines := strings.Split(string(data), "\n")
+	
+	// Show last N lines (default 50)
+	n := 50
+	if len(args) > 0 {
+		if val, err := strconv.Atoi(args[0]); err == nil {
+			n = val
+		}
+	}
+
+	start := len(lines) - n
+	if start < 0 {
+		start = 0
+	}
+
+	for _, line := range lines[start:] {
+		if line != "" {
+			fmt.Println(line)
+		}
+	}
 }
 
 func getConfigDir() string {
