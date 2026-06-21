@@ -137,7 +137,7 @@ func startDaemon() {
 	actionExecutor := engine.NewActionExecutor(state, chrome)
 
 	// Create rule engine
-	ruleEngine := engine.NewEngine(state)
+	ruleEngine := engine.NewEngine(state, sessionMgr)
 
 	// Load categories and rules from config
 	configDir := getConfigDir()
@@ -412,9 +412,27 @@ func categoryCmd(args []string) {
 			fmt.Printf("%s: %v\n", name, patterns)
 		}
 	case "add":
-		fmt.Println("category: add - not implemented yet")
+		if len(args) < 3 {
+			fmt.Fprintln(os.Stderr, "Usage: makima category add <name> <patterns...>")
+			os.Exit(1)
+		}
+		name := args[1]
+		patterns := args[2:]
+		if err := client.CategoryAdd(name, patterns); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to add category: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Category '%s' added\n", name)
 	case "remove":
-		fmt.Println("category: remove - not implemented yet")
+		if len(args) < 2 {
+			fmt.Fprintln(os.Stderr, "Usage: makima category remove <name>")
+			os.Exit(1)
+		}
+		if err := client.CategoryRemove(args[1]); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to remove category: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Category '%s' removed\n", args[1])
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown category subcommand: %s\n", args[0])
 		os.Exit(1)

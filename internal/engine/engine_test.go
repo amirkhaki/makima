@@ -13,7 +13,7 @@ func TestRuleEvaluation(t *testing.T) {
 		URL: "https://game.com/play",
 	})
 
-	eng := NewEngine(state)
+	eng := NewEngine(state, NewSessionManager())
 
 	// Load categories
 	eng.SetCategories(map[string]*dsl.Category{

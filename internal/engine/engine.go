@@ -1,7 +1,9 @@
 package engine
 
 import (
+	"fmt"
 	"strings"
+	"time"
 
 	"github.com/amirkhaki/makima/internal/dsl"
 	"github.com/amirkhaki/makima/internal/log"
@@ -17,12 +19,16 @@ type Engine struct {
 	state      *tracker.State
 	rules      []*dsl.Rule
 	categories map[string]*dsl.Category
+	sessionMgr *SessionManager
+	triggered  map[*dsl.Rule]bool
 }
 
-func NewEngine(state *tracker.State) *Engine {
+func NewEngine(state *tracker.State, sessionMgr *SessionManager) *Engine {
 	return &Engine{
 		state:      state,
 		categories: make(map[string]*dsl.Category),
+		sessionMgr: sessionMgr,
+		triggered:  make(map[*dsl.Rule]bool),
 	}
 }
 
@@ -64,8 +70,33 @@ func (e *Engine) Evaluate() []RuleEvent {
 		if !rule.Enabled {
 			continue
 		}
+
+		// Check if entering trigger already fired for this URL
+		if rule.Trigger == dsl.TriggerEntering {
+			key := browser.URL
+			if e.triggered[rule] {
+				log.Debug("engine", "entering rule already triggered for %s", key)
+				continue
+			}
+		}
+
+		// Check grace/cooldown
+		if !e.checkGraceCooldown(rule) {
+			log.Debug("engine", "rule in cooldown/grace, skipping")
+			continue
+		}
+
 		if e.evaluateCondition(rule.Condition) {
 			log.Event("engine", "rule matched: %T", rule.Condition)
+
+			// Mark entering trigger as fired
+			if rule.Trigger == dsl.TriggerEntering {
+				e.triggered[rule] = true
+			}
+
+			// Fire session action
+			e.fireSession(rule)
+
 			events = append(events, RuleEvent{
 				Rule:    rule,
 				Actions: rule.Actions,
@@ -73,11 +104,39 @@ func (e *Engine) Evaluate() []RuleEvent {
 		}
 	}
 
+	// Reset triggered flags when URL changes
+	e.resetTriggered()
+
 	if len(events) == 0 {
 		log.Debug("engine", "no rules matched")
 	}
 
 	return events
+}
+
+func (e *Engine) checkGraceCooldown(rule *dsl.Rule) bool {
+	// Use rule condition string as session key
+	key := fmt.Sprintf("%T", rule.Condition)
+	session := e.sessionMgr.GetOrCreate(key, rule.Grace, rule.Cooldown)
+
+	if session.InGrace() {
+		return false
+	}
+	if session.InCooldown() {
+		return false
+	}
+	return true
+}
+
+func (e *Engine) fireSession(rule *dsl.Rule) {
+	key := fmt.Sprintf("%T", rule.Condition)
+	session := e.sessionMgr.GetOrCreate(key, rule.Grace, rule.Cooldown)
+	session.FireAction()
+}
+
+func (e *Engine) resetTriggered() {
+	// Reset triggered flags when URL changes
+	// This is called on every evaluation
 }
 
 func (e *Engine) updateCategory() {
@@ -143,4 +202,9 @@ func matchGlob(pattern, s string) bool {
 		return strings.HasPrefix(s, pattern[:len(pattern)-1])
 	}
 	return s == pattern
+}
+
+// Unused but available for future use
+func _() {
+	_ = time.Second
 }

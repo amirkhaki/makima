@@ -304,14 +304,19 @@ func parseHyprctlAction(str string) (Action, error) {
 }
 
 func parseNotifyAction(str string) (Action, error) {
-	// notify "Hello"
+	// notify "Hello" "World"
 	str = strings.TrimPrefix(str, "notify ")
-	msg, _ := extractQuoted(str)
+	msg, remaining := extractQuoted(str)
 	if msg == "" {
 		msg = strings.TrimSpace(str)
 	}
 
-	return &NotifyAction{Summary: msg, Body: ""}, nil
+	body := ""
+	if remaining != "" {
+		body, _ = extractQuoted(strings.TrimSpace(remaining))
+	}
+
+	return &NotifyAction{Summary: msg, Body: body}, nil
 }
 
 func parseExecAction(str string) (Action, error) {

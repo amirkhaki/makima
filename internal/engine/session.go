@@ -51,10 +51,28 @@ func (s *Session) InCooldown() bool {
 	return time.Since(s.fired) < s.cooldown
 }
 
+type Budget struct {
+	Minutes   int
+	StartTime time.Time
+	EndTime   time.Time
+}
+
+func (b *Budget) Expired() bool {
+	return time.Now().After(b.EndTime)
+}
+
+func (b *Budget) Remaining() time.Duration {
+	remaining := time.Until(b.EndTime)
+	if remaining < 0 {
+		return 0
+	}
+	return remaining
+}
+
 type SessionManager struct {
 	mu            sync.RWMutex
 	sessions      map[string]*Session
-	budgetMinutes int
+	budget        *Budget
 }
 
 func NewSessionManager() *SessionManager {
@@ -80,13 +98,25 @@ func (m *SessionManager) SetBudget(minutes int) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// Store budget in minutes for current session
-	// This will be used by the engine to schedule tab close
-	m.budgetMinutes = minutes
+	now := time.Now()
+	m.budget = &Budget{
+		Minutes:   minutes,
+		StartTime: now,
+		EndTime:   now.Add(time.Duration(minutes) * time.Minute),
+	}
 }
 
-func (m *SessionManager) GetBudget() int {
+func (m *SessionManager) GetBudget() *Budget {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	return m.budgetMinutes
+	return m.budget
+}
+
+func (m *SessionManager) BudgetExpired() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if m.budget == nil {
+		return false
+	}
+	return m.budget.Expired()
 }

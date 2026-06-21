@@ -22,7 +22,7 @@ func TestDaemonEventLoop(t *testing.T) {
 	state := tracker.NewState()
 	sessionMgr := engine.NewSessionManager()
 	actionExecutor := engine.NewActionExecutor(state, nil)
-	ruleEngine := engine.NewEngine(state)
+	ruleEngine := engine.NewEngine(state, engine.NewSessionManager())
 
 	mock := &mockTracker{
 		events: make(chan tracker.Event, 10),

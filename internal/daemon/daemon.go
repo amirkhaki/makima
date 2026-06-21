@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"reflect"
 	"sync"
+	"time"
 
 	"github.com/amirkhaki/makima/internal/dsl"
 	"github.com/amirkhaki/makima/internal/engine"
@@ -84,6 +85,8 @@ func (d *Daemon) Run(ctx context.Context) error {
 	// The goroutines in trackers will exit when ctx.Done() fires
 
 	events := d.eventChan(ctx)
+	budgetTicker := time.NewTicker(5 * time.Second)
+	defer budgetTicker.Stop()
 
 	for {
 		select {
@@ -94,7 +97,28 @@ func (d *Daemon) Run(ctx context.Context) error {
 				return nil
 			}
 			d.handleEvent(event)
+		case <-budgetTicker.C:
+			d.checkBudget()
 		}
+	}
+}
+
+func (d *Daemon) checkBudget() {
+	budget := d.sessionMgr.GetBudget()
+	if budget == nil {
+		return
+	}
+
+	if budget.Expired() {
+		log.Event("daemon", "budget expired (%d minutes), closing tab", budget.Minutes)
+		if d.chromeTracker != nil {
+			tabs, err := d.chromeTracker.GetTabs()
+			if err == nil && len(tabs) > 0 {
+				d.chromeTracker.CloseTab(tabs[0].ID)
+			}
+		}
+		// Reset budget
+		d.sessionMgr.SetBudget(0)
 	}
 }
 
