@@ -167,6 +167,8 @@ func stopDaemon() {
 		// Check if process is still running
 		if err := process.Signal(syscall.Signal(0)); err != nil {
 			fmt.Println("Daemon stopped")
+			// Clean up lock file
+			os.Remove(lockPath)
 			return
 		}
 		time.Sleep(100 * time.Millisecond)
