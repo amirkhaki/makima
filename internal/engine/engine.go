@@ -102,6 +102,9 @@ func (e *Engine) SetCategories(categories map[string]*dsl.Category) {
 }
 
 func (e *Engine) Evaluate() []RuleEvent {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
 	var events []RuleEvent
 
 	// Update category from URL before evaluating

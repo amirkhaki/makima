@@ -171,7 +171,11 @@ func (d *Daemon) handleEvent(event tracker.Event) {
 	if event.Type == "chrome" || event.Type == "workspace" {
 		ruleEvents := d.ruleEngine.Evaluate()
 		d.executeRuleEvents(ruleEvents)
+		return
 	}
+
+	// Log unknown event types
+	log.Debug("daemon", "ignoring unknown event type: %s", event.Type)
 }
 
 func (d *Daemon) executeRuleEvents(ruleEvents []engine.RuleEvent) {
