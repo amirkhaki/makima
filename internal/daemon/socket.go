@@ -135,7 +135,10 @@ func (s *SocketServer) handleConn(conn net.Conn) {
 	go func() {
 		for msg := range clientCh {
 			msg = append(msg, '\n')
-			conn.Write(msg)
+			if _, err := conn.Write(msg); err != nil {
+				// Client disconnected, stop broadcasting
+				return
+			}
 		}
 	}()
 
@@ -161,9 +164,16 @@ func (s *SocketServer) handleConn(conn net.Conn) {
 			}
 		}
 
-		data, _ := json.Marshal(resp)
+		data, err := json.Marshal(resp)
+		if err != nil {
+			log.Error("socket: failed to marshal response: %v", err)
+			continue
+		}
 		data = append(data, '\n')
-		conn.Write(data)
+		if _, err := conn.Write(data); err != nil {
+			// Client disconnected
+			return
+		}
 	}
 }
 

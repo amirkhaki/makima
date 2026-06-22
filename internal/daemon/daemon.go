@@ -253,7 +253,11 @@ func (d *Daemon) sendPopup(action *dsl.PopupAction) {
 		"method": "popup",
 		"params": params,
 	}
-	data, _ := json.Marshal(msg)
+	data, err := json.Marshal(msg)
+	if err != nil {
+		log.Error("daemon: failed to marshal popup: %v", err)
+		return
+	}
 	d.Broadcast(data)
 }
 
@@ -264,6 +268,10 @@ func (d *Daemon) sendError(errMsg string) {
 			"message": errMsg,
 		},
 	}
-	data, _ := json.Marshal(msg)
+	data, err := json.Marshal(msg)
+	if err != nil {
+		log.Error("daemon: failed to marshal error: %v", err)
+		return
+	}
 	d.Broadcast(data)
 }
