@@ -310,15 +310,8 @@ func handleRequest(req daemon.Request, state *tracker.State, ruleEngine *engine.
 		if err := json.Unmarshal(req.Params, &params); err != nil {
 			return daemon.Response{ID: req.ID, Error: err.Error()}
 		}
-		// Find and remove rule by ID
-		rules := ruleEngine.GetRules()
-		for i, rule := range rules {
-			if rule.ID == params.ID {
-				ruleEngine.RemoveRule(i)
-				return daemon.Response{ID: req.ID, Result: "ok"}
-			}
-		}
-		return daemon.Response{ID: req.ID, Error: "rule not found"}
+		ruleEngine.RemoveRule(params.ID)
+		return daemon.Response{ID: req.ID, Result: "ok"}
 	case "rule.enable":
 		var params struct {
 			ID string `json:"id"`
@@ -326,15 +319,8 @@ func handleRequest(req daemon.Request, state *tracker.State, ruleEngine *engine.
 		if err := json.Unmarshal(req.Params, &params); err != nil {
 			return daemon.Response{ID: req.ID, Error: err.Error()}
 		}
-		// Find and enable rule by ID
-		rules := ruleEngine.GetRules()
-		for i, rule := range rules {
-			if rule.ID == params.ID {
-				ruleEngine.SetRuleEnabled(i, true)
-				return daemon.Response{ID: req.ID, Result: "ok"}
-			}
-		}
-		return daemon.Response{ID: req.ID, Error: "rule not found"}
+		ruleEngine.SetRuleEnabled(params.ID, true)
+		return daemon.Response{ID: req.ID, Result: "ok"}
 	case "rule.disable":
 		var params struct {
 			ID string `json:"id"`
@@ -342,15 +328,8 @@ func handleRequest(req daemon.Request, state *tracker.State, ruleEngine *engine.
 		if err := json.Unmarshal(req.Params, &params); err != nil {
 			return daemon.Response{ID: req.ID, Error: err.Error()}
 		}
-		// Find and disable rule by ID
-		rules := ruleEngine.GetRules()
-		for i, rule := range rules {
-			if rule.ID == params.ID {
-				ruleEngine.SetRuleEnabled(i, false)
-				return daemon.Response{ID: req.ID, Result: "ok"}
-			}
-		}
-		return daemon.Response{ID: req.ID, Error: "rule not found"}
+		ruleEngine.SetRuleEnabled(params.ID, false)
+		return daemon.Response{ID: req.ID, Result: "ok"}
 	case "category.list":
 		categories := ruleEngine.GetCategories()
 		result := make(map[string][]string)

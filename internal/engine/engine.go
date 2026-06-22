@@ -43,19 +43,25 @@ func (e *Engine) AddRule(rule *dsl.Rule) {
 	e.rules = append(e.rules, rule)
 }
 
-func (e *Engine) RemoveRule(index int) {
+func (e *Engine) RemoveRule(id string) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	if index >= 0 && index < len(e.rules) {
-		e.rules = append(e.rules[:index], e.rules[index+1:]...)
+	for i, rule := range e.rules {
+		if rule.ID == id {
+			e.rules = append(e.rules[:i], e.rules[i+1:]...)
+			return
+		}
 	}
 }
 
-func (e *Engine) SetRuleEnabled(index int, enabled bool) {
+func (e *Engine) SetRuleEnabled(id string, enabled bool) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	if index >= 0 && index < len(e.rules) {
-		e.rules[index].Enabled = enabled
+	for _, rule := range e.rules {
+		if rule.ID == id {
+			rule.Enabled = enabled
+			return
+		}
 	}
 }
 
