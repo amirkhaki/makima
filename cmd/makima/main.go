@@ -270,9 +270,11 @@ func handleRequest(req daemon.Request, state *tracker.State, ruleEngine *engine.
 		// Convert to RuleInfo format for client
 		var ruleInfos []map[string]interface{}
 		for _, rule := range rules {
+			// Convert condition to human-readable string
+			conditionStr := conditionToString(rule.Condition)
 			ruleInfos = append(ruleInfos, map[string]interface{}{
 				"id":        rule.ID,
-				"condition": fmt.Sprintf("%T", rule.Condition),
+				"condition": conditionStr,
 				"enabled":   rule.Enabled,
 			})
 		}
@@ -684,8 +686,12 @@ func configCmd(args []string) {
 			return
 		}
 		for _, entry := range entries {
-			info, _ := entry.Info()
-			fmt.Printf("  %s (%d bytes)\n", entry.Name(), info.Size())
+			info, err := entry.Info()
+			if err != nil {
+				fmt.Printf("  %s\n", entry.Name())
+			} else {
+				fmt.Printf("  %s (%d bytes)\n", entry.Name(), info.Size())
+			}
 		}
 		return
 	}
@@ -780,4 +786,27 @@ func getTodoStore() *todo.Store {
 		}
 	}
 	return todoStore
+}
+
+func conditionToString(cond dsl.Condition) string {
+	switch c := cond.(type) {
+	case *dsl.CategoryCondition:
+		return "browser.category is " + c.Category
+	case *dsl.URLCondition:
+		return "browser.url matches " + c.Pattern
+	case *dsl.TabTitleCondition:
+		return "browser.tab.title matches " + c.Pattern
+	case *dsl.DomainCondition:
+		return "browser.domain matches " + c.Pattern
+	case *dsl.AppCondition:
+		return "app." + c.Name + " running"
+	case *dsl.WindowClassCondition:
+		return "window.class matches " + c.Pattern
+	case *dsl.WorkspaceCountCondition:
+		return "workspace.count " + c.Operator + " " + fmt.Sprintf("%d", c.Count)
+	case *dsl.TimeOnSiteCondition:
+		return "browser.time_on_site " + c.Operator + " " + c.Duration.String()
+	default:
+		return fmt.Sprintf("%T", cond)
+	}
 }
