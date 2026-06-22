@@ -104,14 +104,23 @@ func daemonCmd(args []string) {
 		os.Exit(1)
 	}
 
-	// Check for --verbose flag
+	// Check for --verbose flag in any position
 	for _, arg := range args {
 		if arg == "--verbose" || arg == "-v" {
 			log.SetVerbose(true)
 		}
 	}
 
-	switch args[0] {
+	// Find the subcommand (skip flags)
+	subcmd := ""
+	for _, arg := range args {
+		if arg != "--verbose" && arg != "-v" {
+			subcmd = arg
+			break
+		}
+	}
+
+	switch subcmd {
 	case "start":
 		startDaemon()
 	case "stop":
@@ -119,7 +128,7 @@ func daemonCmd(args []string) {
 	case "restart":
 		restartDaemon()
 	default:
-		fmt.Fprintf(os.Stderr, "Unknown daemon subcommand: %s\n", args[0])
+		fmt.Fprintf(os.Stderr, "Unknown daemon subcommand: %s\n", subcmd)
 		os.Exit(1)
 	}
 }
@@ -153,12 +162,23 @@ func stopDaemon() {
 		return
 	}
 
-	fmt.Println("Daemon stopped")
+	// Wait for process to exit
+	for i := 0; i < 50; i++ {
+		// Check if process is still running
+		if err := process.Signal(syscall.Signal(0)); err != nil {
+			fmt.Println("Daemon stopped")
+			return
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	fmt.Println("Daemon stop timeout - process may still be running")
 }
 
 func restartDaemon() {
 	stopDaemon()
-	time.Sleep(1 * time.Second)
+	// Wait a bit for cleanup
+	time.Sleep(500 * time.Millisecond)
 	startDaemon()
 }
 
