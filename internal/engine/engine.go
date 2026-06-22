@@ -225,8 +225,23 @@ func (e *Engine) evaluateCondition(cond dsl.Condition) bool {
 	case *dsl.TimeOnSiteCondition:
 		browser := e.state.GetBrowser()
 		// TimeOnSite is in seconds, Duration is in time.Duration
-		match := time.Duration(browser.TimeOnSite)*time.Second >= c.Duration
-		log.Debug("engine", "time on site check: duration=%v state=%v match=%v", c.Duration, browser.TimeOnSite, match)
+		stateDuration := time.Duration(browser.TimeOnSite) * time.Second
+		var match bool
+		switch c.Operator {
+		case ">":
+			match = stateDuration > c.Duration
+		case "<":
+			match = stateDuration < c.Duration
+		case ">=":
+			match = stateDuration >= c.Duration
+		case "<=":
+			match = stateDuration <= c.Duration
+		case "==":
+			match = stateDuration == c.Duration
+		default:
+			match = stateDuration >= c.Duration
+		}
+		log.Debug("engine", "time on site check: duration=%v state=%v operator=%s match=%v", c.Duration, stateDuration, c.Operator, match)
 		return match
 	case *dsl.WorkspaceCountCondition:
 		hypr := e.state.GetHyprland()

@@ -125,6 +125,7 @@ func (*WindowClassCondition) conditionNode() {}
 
 type TimeOnSiteCondition struct {
 	Duration time.Duration
+	Operator string
 }
 
 func (*TimeOnSiteCondition) conditionNode() {}

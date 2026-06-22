@@ -144,9 +144,9 @@ type hyprlandHandler struct {
 
 func (h *hyprlandHandler) Workspace(w event.WorkspaceName) {
 	id, _ := strconv.Atoi(string(w))
-	h.tracker.state.UpdateHyprland(HyprlandState{
-		ActiveWorkspace: id,
-	})
+	current := h.tracker.state.GetHyprland()
+	current.ActiveWorkspace = id
+	h.tracker.state.UpdateHyprland(current)
 	h.tracker.events <- Event{
 		Type: "workspace",
 		Data: w,
@@ -154,10 +154,10 @@ func (h *hyprlandHandler) Workspace(w event.WorkspaceName) {
 }
 
 func (h *hyprlandHandler) ActiveWindow(w event.ActiveWindow) {
-	h.tracker.state.UpdateHyprland(HyprlandState{
-		WindowClass: w.Name,
-		WindowTitle: w.Title,
-	})
+	current := h.tracker.state.GetHyprland()
+	current.WindowClass = w.Name
+	current.WindowTitle = w.Title
+	h.tracker.state.UpdateHyprland(current)
 	h.tracker.events <- Event{
 		Type: "window",
 		Data: w,

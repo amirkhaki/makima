@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -136,6 +137,7 @@ func parseCondition(str string) (Condition, error) {
 	// app.mpv running
 	// app.mpv running for 30m
 	// window.class matches firefox
+	// workspace.count > 5
 
 	str = strings.TrimSpace(str)
 
@@ -145,6 +147,8 @@ func parseCondition(str string) (Condition, error) {
 		return parseAppCondition(str)
 	} else if strings.HasPrefix(str, "window.") {
 		return parseWindowCondition(str)
+	} else if strings.HasPrefix(str, "workspace.") {
+		return parseWorkspaceCondition(str)
 	}
 
 	return nil, fmt.Errorf("unknown condition: %s", str)
@@ -185,7 +189,7 @@ func parseBrowserCondition(str string) (Condition, error) {
 		parts := strings.SplitN(str, " ", 3)
 		if len(parts) == 3 {
 			field := strings.TrimPrefix(parts[0], "browser.")
-			_ = parts[1] // operator
+			operator := parts[1]
 			value := parts[2]
 
 			if field == "time_on_site" {
@@ -193,7 +197,7 @@ func parseBrowserCondition(str string) (Condition, error) {
 				if err != nil {
 					return nil, err
 				}
-				return &TimeOnSiteCondition{Duration: dur}, nil
+				return &TimeOnSiteCondition{Duration: dur, Operator: operator}, nil
 			}
 		}
 	}
@@ -231,6 +235,25 @@ func parseWindowCondition(str string) (Condition, error) {
 	}
 
 	return nil, fmt.Errorf("unknown window condition: %s", str)
+}
+
+func parseWorkspaceCondition(str string) (Condition, error) {
+	// workspace.count > 5
+	// workspace.count >= 3
+
+	if strings.Contains(str, " count ") {
+		parts := strings.Fields(str)
+		if len(parts) == 3 {
+			operator := parts[1]
+			count, err := strconv.Atoi(parts[2])
+			if err != nil {
+				return nil, fmt.Errorf("invalid count: %s", parts[2])
+			}
+			return &WorkspaceCountCondition{Operator: operator, Count: count}, nil
+		}
+	}
+
+	return nil, fmt.Errorf("unknown workspace condition: %s", str)
 }
 
 func parseActions(str string) ([]Action, error) {
