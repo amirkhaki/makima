@@ -267,9 +267,18 @@ func handleRequest(req daemon.Request, state *tracker.State, ruleEngine *engine.
 		return daemon.Response{ID: req.ID, Result: "ok"}
 	case "rule.list":
 		rules := ruleEngine.GetRules()
+		// Convert to RuleInfo format for client
+		var ruleInfos []map[string]interface{}
+		for _, rule := range rules {
+			ruleInfos = append(ruleInfos, map[string]interface{}{
+				"id":        rule.ID,
+				"condition": fmt.Sprintf("%T", rule.Condition),
+				"enabled":   rule.Enabled,
+			})
+		}
 		return daemon.Response{
 			ID:     req.ID,
-			Result: rules,
+			Result: ruleInfos,
 		}
 	case "rule.add":
 		var params struct {

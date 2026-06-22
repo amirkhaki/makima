@@ -167,8 +167,8 @@ func (d *Daemon) handleEvent(event tracker.Event) {
 		return
 	}
 
-	// For chrome events, evaluate directly
-	if event.Type == "chrome" {
+	// For chrome and workspace events, evaluate directly
+	if event.Type == "chrome" || event.Type == "workspace" {
 		ruleEvents := d.ruleEngine.Evaluate()
 		d.executeRuleEvents(ruleEvents)
 	}

@@ -207,11 +207,27 @@ func (t *ChromeTracker) Events() <-chan Event {
 
 func (t *ChromeTracker) updateTab(tab TabInfo) {
 	log.Debug("chrome", "state update: url=%s title=%s domain=%s", tab.URL, tab.Title, tab.Domain)
-	t.state.UpdateBrowser(BrowserState{
-		URL:      tab.URL,
-		TabTitle: tab.Title,
-		Domain:   tab.Domain,
-	})
+	
+	// Get current state to calculate time on site
+	current := t.state.GetBrowser()
+	
+	// If URL changed, reset time on site
+	if current.URL != tab.URL {
+		t.state.UpdateBrowser(BrowserState{
+			URL:       tab.URL,
+			TabTitle:  tab.Title,
+			Domain:    tab.Domain,
+			TimeOnSite: 0,
+		})
+	} else {
+		// Same URL, increment time on site
+		t.state.UpdateBrowser(BrowserState{
+			URL:        tab.URL,
+			TabTitle:   tab.Title,
+			Domain:     tab.Domain,
+			TimeOnSite: current.TimeOnSite + 1,
+		})
+	}
 }
 
 func extractDomain(rawURL string) string {
