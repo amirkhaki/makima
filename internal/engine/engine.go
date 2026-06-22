@@ -301,6 +301,12 @@ func (e *Engine) evaluateCondition(cond dsl.Condition) bool {
 		}
 		log.Debug("engine", "workspace count check: count=%d operator=%s state=%d match=%v", c.Count, c.Operator, hypr.WorkspaceCount, match)
 		return match
+	case *dsl.TimeBetweenCondition:
+		now := time.Now()
+		currentTime := now.Format("15:04")
+		match := currentTime >= c.Start && currentTime <= c.End
+		log.Debug("engine", "time between check: start=%s end=%s current=%s match=%v", c.Start, c.End, currentTime, match)
+		return match
 	default:
 		return false
 	}

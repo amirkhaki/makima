@@ -138,6 +138,7 @@ func parseCondition(str string) (Condition, error) {
 	// app.mpv running for 30m
 	// window.class matches firefox
 	// workspace.count > 5
+	// time between 9:00 and 17:00
 
 	str = strings.TrimSpace(str)
 
@@ -149,6 +150,8 @@ func parseCondition(str string) (Condition, error) {
 		return parseWindowCondition(str)
 	} else if strings.HasPrefix(str, "workspace.") {
 		return parseWorkspaceCondition(str)
+	} else if strings.HasPrefix(str, "time ") {
+		return parseTimeCondition(str)
 	}
 
 	return nil, fmt.Errorf("unknown condition: %s", str)
@@ -254,6 +257,24 @@ func parseWorkspaceCondition(str string) (Condition, error) {
 	}
 
 	return nil, fmt.Errorf("unknown workspace condition: %s", str)
+}
+
+func parseTimeCondition(str string) (Condition, error) {
+	// time between 9:00 and 17:00
+	if strings.Contains(str, " between ") && strings.Contains(str, " and ") {
+		parts := strings.SplitN(str, " between ", 2)
+		if len(parts) == 2 {
+			timeParts := strings.SplitN(parts[1], " and ", 2)
+			if len(timeParts) == 2 {
+				return &TimeBetweenCondition{
+					Start: strings.TrimSpace(timeParts[0]),
+					End:   strings.TrimSpace(timeParts[1]),
+				}, nil
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("unknown time condition: %s", str)
 }
 
 func parseActions(str string) ([]Action, error) {
