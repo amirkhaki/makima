@@ -368,7 +368,13 @@ func parseExecAction(str string) (Action, error) {
 		cmd = strings.TrimSpace(str)
 	}
 
-	return &ExecAction{Command: cmd, Args: []string{}}, nil
+	// Split command into parts
+	parts := strings.Fields(cmd)
+	if len(parts) == 0 {
+		return nil, fmt.Errorf("exec requires a command")
+	}
+
+	return &ExecAction{Command: parts[0], Args: parts[1:]}, nil
 }
 
 func parseCDPAction(str string) (Action, error) {

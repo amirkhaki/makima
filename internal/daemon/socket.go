@@ -170,5 +170,6 @@ func (s *SocketServer) handleConn(conn net.Conn) {
 func (s *SocketServer) Close() error {
 	err := s.listener.Close()
 	os.Remove(s.lockPath)
+	os.Remove(s.sockPath)
 	return err
 }
