@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -22,6 +23,7 @@ type Todo struct {
 type Store struct {
 	filePath string
 	todos    []*Todo
+	mu       sync.RWMutex
 }
 
 func NewStore(filePath string) (*Store, error) {
@@ -55,6 +57,9 @@ func (s *Store) save() error {
 }
 
 func (s *Store) Add(text, parentID string) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	id := s.generateID()
 	todo := &Todo{
 		ID:        id,
@@ -82,6 +87,9 @@ func (s *Store) Add(text, parentID string) (string, error) {
 }
 
 func (s *Store) Complete(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	todo := s.findTodo(id)
 	if todo == nil {
 		return fmt.Errorf("todo %s not found", id)
@@ -110,6 +118,9 @@ func (s *Store) completeTodo(todo *Todo) {
 }
 
 func (s *Store) Remove(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if s.removeTodoFromSlice(&s.todos, id) {
 		return s.save()
 	}
@@ -130,6 +141,8 @@ func (s *Store) removeTodoFromSlice(todos *[]*Todo, id string) bool {
 }
 
 func (s *Store) List() []*Todo {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.todos
 }
 

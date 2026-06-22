@@ -3,6 +3,7 @@ package engine
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/amirkhaki/makima/internal/dsl"
@@ -23,6 +24,7 @@ type Engine struct {
 	sessionMgr *SessionManager
 	triggered  map[*dsl.Rule]bool
 	lastURL    string
+	mu         sync.RWMutex
 }
 
 func NewEngine(state *tracker.State, sessionMgr *SessionManager) *Engine {
@@ -35,18 +37,43 @@ func NewEngine(state *tracker.State, sessionMgr *SessionManager) *Engine {
 }
 
 func (e *Engine) AddRule(rule *dsl.Rule) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
 	log.Event("engine", "rule loaded: condition=%T enabled=%v", rule.Condition, rule.Enabled)
 	e.rules = append(e.rules, rule)
 }
 
 func (e *Engine) RemoveRule(index int) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
 	if index >= 0 && index < len(e.rules) {
 		e.rules = append(e.rules[:index], e.rules[index+1:]...)
 	}
 }
 
 func (e *Engine) GetRules() []*dsl.Rule {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
 	return e.rules
+}
+
+func (e *Engine) AddCategory(name string, category *dsl.Category) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	log.Event("engine", "category loaded: %s -> %v", name, category.Patterns)
+	e.categories[name] = category
+}
+
+func (e *Engine) RemoveCategory(name string) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	delete(e.categories, name)
+}
+
+func (e *Engine) GetCategories() map[string]*dsl.Category {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.categories
 }
 
 func (e *Engine) SetCategories(categories map[string]*dsl.Category) {
@@ -54,19 +81,6 @@ func (e *Engine) SetCategories(categories map[string]*dsl.Category) {
 		log.Event("engine", "category loaded: %s -> %v", name, cat.Patterns)
 	}
 	e.categories = categories
-}
-
-func (e *Engine) AddCategory(name string, category *dsl.Category) {
-	log.Event("engine", "category loaded: %s -> %v", name, category.Patterns)
-	e.categories[name] = category
-}
-
-func (e *Engine) RemoveCategory(name string) {
-	delete(e.categories, name)
-}
-
-func (e *Engine) GetCategories() map[string]*dsl.Category {
-	return e.categories
 }
 
 func (e *Engine) Evaluate() []RuleEvent {

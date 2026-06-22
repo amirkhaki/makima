@@ -287,9 +287,11 @@ func handleRequest(req daemon.Request, state *tracker.State, ruleEngine *engine.
 			return daemon.Response{ID: req.ID, Error: err.Error()}
 		}
 		if len(file.Rules) > 0 {
-			ruleEngine.AddRule(file.Rules[0])
+			rule := file.Rules[0]
+			ruleEngine.AddRule(rule)
+			return daemon.Response{ID: req.ID, Result: rule.ID}
 		}
-		return daemon.Response{ID: req.ID, Result: "ok"}
+		return daemon.Response{ID: req.ID, Error: "failed to parse rule"}
 	case "rule.remove":
 		var params struct {
 			ID string `json:"id"`
@@ -372,6 +374,9 @@ func handleRequest(req daemon.Request, state *tracker.State, ruleEngine *engine.
 		return daemon.Response{ID: req.ID, Result: "ok"}
 	case "todo.list":
 		store := getTodoStore()
+		if store == nil {
+			return daemon.Response{ID: req.ID, Error: "failed to load todo store"}
+		}
 		todos := store.List()
 		return daemon.Response{
 			ID:     req.ID,
@@ -386,6 +391,9 @@ func handleRequest(req daemon.Request, state *tracker.State, ruleEngine *engine.
 			return daemon.Response{ID: req.ID, Error: err.Error()}
 		}
 		store := getTodoStore()
+		if store == nil {
+			return daemon.Response{ID: req.ID, Error: "failed to load todo store"}
+		}
 		parentID := ""
 		if params.ParentID != nil {
 			parentID = *params.ParentID
@@ -406,6 +414,9 @@ func handleRequest(req daemon.Request, state *tracker.State, ruleEngine *engine.
 			return daemon.Response{ID: req.ID, Error: err.Error()}
 		}
 		store := getTodoStore()
+		if store == nil {
+			return daemon.Response{ID: req.ID, Error: "failed to load todo store"}
+		}
 		if err := store.Complete(params.ID); err != nil {
 			return daemon.Response{ID: req.ID, Error: err.Error()}
 		}
@@ -418,6 +429,9 @@ func handleRequest(req daemon.Request, state *tracker.State, ruleEngine *engine.
 			return daemon.Response{ID: req.ID, Error: err.Error()}
 		}
 		store := getTodoStore()
+		if store == nil {
+			return daemon.Response{ID: req.ID, Error: "failed to load todo store"}
+		}
 		if err := store.Remove(params.ID); err != nil {
 			return daemon.Response{ID: req.ID, Error: err.Error()}
 		}
