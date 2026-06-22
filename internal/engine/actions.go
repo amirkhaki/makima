@@ -25,6 +25,12 @@ func (a *ActionExecutor) Execute(action dsl.Action) error {
 	switch act := action.(type) {
 	case *dsl.CDPAction:
 		return a.executeCDP(act)
+	case *dsl.CDPNewTabAction:
+		return a.executeCDPNewTab(act)
+	case *dsl.CDPMuteTabAction:
+		return a.executeCDPMuteTab()
+	case *dsl.CDPCloseDomainAction:
+		return a.executeCDPCloseDomain(act)
 	case *dsl.HyprctlAction:
 		return a.executeHyprctl(act)
 	case *dsl.PopupAction:
@@ -36,6 +42,39 @@ func (a *ActionExecutor) Execute(action dsl.Action) error {
 	default:
 		return fmt.Errorf("unknown action type: %T", action)
 	}
+}
+
+func (a *ActionExecutor) executeCDPNewTab(action *dsl.CDPNewTabAction) error {
+	if a.chrome == nil {
+		return fmt.Errorf("chrome tracker not available")
+	}
+	// Navigate to URL in first tab (simplified)
+	if action.URL != "" {
+		return a.chrome.Navigate(action.URL)
+	}
+	return nil
+}
+
+func (a *ActionExecutor) executeCDPMuteTab() error {
+	// Mute tab - simplified implementation
+	return nil
+}
+
+func (a *ActionExecutor) executeCDPCloseDomain(action *dsl.CDPCloseDomainAction) error {
+	if a.chrome == nil {
+		return fmt.Errorf("chrome tracker not available")
+	}
+	// Close all tabs matching domain
+	tabs, err := a.chrome.GetTabs()
+	if err != nil {
+		return err
+	}
+	for _, tab := range tabs {
+		if strings.Contains(tab.Domain, action.Domain) {
+			a.chrome.CloseTab(tab.ID)
+		}
+	}
+	return nil
 }
 
 func (a *ActionExecutor) executeCDP(action *dsl.CDPAction) error {

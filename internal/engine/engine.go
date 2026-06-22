@@ -200,10 +200,42 @@ func (e *Engine) evaluateCondition(cond dsl.Condition) bool {
 		match := matchGlob(c.Pattern, browser.URL)
 		log.Debug("engine", "url check: pattern=%s url=%s match=%v", c.Pattern, browser.URL, match)
 		return match
+	case *dsl.TabTitleCondition:
+		browser := e.state.GetBrowser()
+		match := matchGlob(c.Pattern, browser.TabTitle)
+		log.Debug("engine", "tab title check: pattern=%s title=%s match=%v", c.Pattern, browser.TabTitle, match)
+		return match
+	case *dsl.DomainCondition:
+		browser := e.state.GetBrowser()
+		match := matchGlob(c.Pattern, browser.Domain)
+		log.Debug("engine", "domain check: pattern=%s domain=%s match=%v", c.Pattern, browser.Domain, match)
+		return match
 	case *dsl.AppCondition:
 		hypr := e.state.GetHyprland()
 		match := matchGlob(c.Name, hypr.WindowClass)
 		log.Debug("engine", "app check: name=%s window=%s match=%v", c.Name, hypr.WindowClass, match)
+		return match
+	case *dsl.WindowClassCondition:
+		hypr := e.state.GetHyprland()
+		match := matchGlob(c.Pattern, hypr.WindowClass)
+		log.Debug("engine", "window class check: pattern=%s class=%s match=%v", c.Pattern, hypr.WindowClass, match)
+		return match
+	case *dsl.WorkspaceCountCondition:
+		hypr := e.state.GetHyprland()
+		match := false
+		switch c.Operator {
+		case ">":
+			match = hypr.WorkspaceCount > c.Count
+		case "<":
+			match = hypr.WorkspaceCount < c.Count
+		case ">=":
+			match = hypr.WorkspaceCount >= c.Count
+		case "<=":
+			match = hypr.WorkspaceCount <= c.Count
+		case "==":
+			match = hypr.WorkspaceCount == c.Count
+		}
+		log.Debug("engine", "workspace count check: count=%d operator=%s state=%d match=%v", c.Count, c.Operator, hypr.WorkspaceCount, match)
 		return match
 	default:
 		return false

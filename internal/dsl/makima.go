@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/amirkhaki/makima/internal/log"
 )
@@ -150,6 +151,8 @@ func parseBrowserCondition(str string) (Condition, error) {
 	// browser.category is games
 	// browser.url matches *.game.com
 	// browser.domain matches example.com
+	// browser.tab.title matches "YouTube"
+	// browser.time_on_site > 30m
 
 	if strings.Contains(str, " is ") {
 		parts := strings.SplitN(str, " is ", 2)
@@ -167,6 +170,28 @@ func parseBrowserCondition(str string) (Condition, error) {
 
 		if field == "url" {
 			return &URLCondition{Pattern: pattern}, nil
+		} else if field == "tab.title" || field == "tabtitle" {
+			return &TabTitleCondition{Pattern: pattern}, nil
+		} else if field == "domain" {
+			return &DomainCondition{Pattern: pattern}, nil
+		}
+	} else if strings.Contains(str, " > ") || strings.Contains(str, " < ") ||
+		strings.Contains(str, " >= ") || strings.Contains(str, " <= ") ||
+		strings.Contains(str, " == ") {
+		// Parse comparison operators
+		parts := strings.SplitN(str, " ", 3)
+		if len(parts) == 3 {
+			field := strings.TrimPrefix(parts[0], "browser.")
+			_ = parts[1] // operator
+			value := parts[2]
+
+			if field == "time_on_site" {
+				dur, err := time.ParseDuration(value)
+				if err != nil {
+					return nil, err
+				}
+				return &TimeOnSiteCondition{Duration: dur}, nil
+			}
 		}
 	}
 
@@ -349,12 +374,16 @@ func parseExecAction(str string) (Action, error) {
 func parseCDPAction(str string) (Action, error) {
 	// cdp close-tab
 	// cdp navigate "https://example.com"
+	// cdp new-tab "https://example.com"
+	// cdp mute-tab
+	// cdp close-domain example.com
 	str = strings.TrimPrefix(str, "cdp ")
 	parts := strings.Fields(str)
 	if len(parts) == 0 {
 		return nil, fmt.Errorf("cdp requires a command")
 	}
 
+	command := parts[0]
 	target := ""
 	if len(parts) > 1 {
 		target = parts[1]
@@ -362,7 +391,16 @@ func parseCDPAction(str string) (Action, error) {
 		target = strings.Trim(target, "\"")
 	}
 
-	return &CDPAction{Command: parts[0], Target: target}, nil
+	switch command {
+	case "new-tab":
+		return &CDPNewTabAction{URL: target}, nil
+	case "mute-tab":
+		return &CDPMuteTabAction{}, nil
+	case "close-domain":
+		return &CDPCloseDomainAction{Domain: target}, nil
+	default:
+		return &CDPAction{Command: command, Target: target}, nil
+	}
 }
 
 func extractQuoted(str string) (string, string) {

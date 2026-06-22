@@ -56,6 +56,22 @@ type CDPAction struct {
 
 func (*CDPAction) actionNode() {}
 
+type CDPNewTabAction struct {
+	URL string
+}
+
+func (*CDPNewTabAction) actionNode() {}
+
+type CDPMuteTabAction struct{}
+
+func (*CDPMuteTabAction) actionNode() {}
+
+type CDPCloseDomainAction struct {
+	Domain string
+}
+
+func (*CDPCloseDomainAction) actionNode() {}
+
 type HyprctlAction struct {
 	Command string
 }
@@ -88,3 +104,41 @@ type Category struct {
 	Name     string
 	Patterns []string
 }
+
+type TabTitleCondition struct {
+	Pattern string
+}
+
+func (*TabTitleCondition) conditionNode() {}
+
+type DomainCondition struct {
+	Pattern string
+}
+
+func (*DomainCondition) conditionNode() {}
+
+type WindowClassCondition struct {
+	Pattern string
+}
+
+func (*WindowClassCondition) conditionNode() {}
+
+type TimeOnSiteCondition struct {
+	Duration time.Duration
+}
+
+func (*TimeOnSiteCondition) conditionNode() {}
+
+type WorkspaceCountCondition struct {
+	Operator string
+	Count    int
+}
+
+func (*WorkspaceCountCondition) conditionNode() {}
+
+type TimeBetweenCondition struct {
+	Start string
+	End   string
+}
+
+func (*TimeBetweenCondition) conditionNode() {}
