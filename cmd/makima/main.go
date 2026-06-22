@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 
@@ -636,9 +637,9 @@ func todoCmd(args []string) {
 		}
 		fmt.Println("Todo removed")
 	case "tree":
-		store, err := todo.NewStore(getConfigDir() + "/todos.json")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to load todos: %v\n", err)
+		store := getTodoStore()
+		if store == nil {
+			fmt.Fprintf(os.Stderr, "Failed to load todos\n")
 			os.Exit(1)
 		}
 		fmt.Println(store.TreeString())
@@ -743,9 +744,12 @@ func newClient() (*cli.Client, error) {
 }
 
 var todoStore *todo.Store
+var todoStoreMu sync.Mutex
 var todoStoreErr error
 
 func getTodoStore() *todo.Store {
+	todoStoreMu.Lock()
+	defer todoStoreMu.Unlock()
 	if todoStore == nil {
 		todoStore, todoStoreErr = todo.NewStore(getConfigDir() + "/todos.json")
 		if todoStoreErr != nil {

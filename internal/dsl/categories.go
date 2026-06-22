@@ -4,7 +4,8 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
+
+	"github.com/amirkhaki/makima/internal/makima"
 )
 
 func (c *Category) Matches(urlStr string) bool {
@@ -14,25 +15,11 @@ func (c *Category) Matches(urlStr string) bool {
 	}
 	host := u.Hostname()
 	for _, pattern := range c.Patterns {
-		if matchGlob(pattern, host) {
+		if makima.MatchGlob(pattern, host) {
 			return true
 		}
 	}
 	return false
-}
-
-func matchGlob(pattern, host string) bool {
-	if pattern == "" {
-		return host == ""
-	}
-	if pattern == "*" {
-		return true
-	}
-	if strings.HasPrefix(pattern, "*.") {
-		suffix := pattern[1:]
-		return host == suffix[1:] || strings.HasSuffix(host, suffix)
-	}
-	return host == pattern
 }
 
 type CategoryLoader struct {

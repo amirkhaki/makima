@@ -6,6 +6,7 @@ import (
 
 	"github.com/amirkhaki/makima/internal/dsl"
 	"github.com/amirkhaki/makima/internal/log"
+	"github.com/amirkhaki/makima/internal/makima"
 	"github.com/amirkhaki/makima/internal/tracker"
 )
 
@@ -243,17 +244,6 @@ func (e *Engine) evaluateCondition(cond dsl.Condition) bool {
 }
 
 func matchGlob(pattern, s string) bool {
-	// Use the same glob matching as categories.go for consistency
-	if pattern == "" {
-		return s == ""
-	}
-	if pattern == "*" {
-		return true
-	}
-	if strings.HasPrefix(pattern, "*.") {
-		suffix := pattern[1:]
-		return s == suffix[1:] || strings.HasSuffix(s, suffix)
-	}
-	return s == pattern
+	return makima.MatchGlob(pattern, s)
 }
 
