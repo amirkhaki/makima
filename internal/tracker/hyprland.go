@@ -127,6 +127,12 @@ func (t *HyprlandTracker) updateState() {
 		current.WindowTitle = window.Title
 	}
 
+	// Get workspace count
+	workspaces, err := t.requestCli.Workspaces()
+	if err == nil {
+		current.WorkspaceCount = len(workspaces)
+	}
+
 	// Update merged state
 	t.state.UpdateHyprland(current)
 }

@@ -135,6 +135,7 @@ func parseCondition(str string) (Condition, error) {
 	// browser.url matches *.game.com
 	// app.mpv running
 	// app.mpv running for 30m
+	// window.class matches firefox
 
 	str = strings.TrimSpace(str)
 
@@ -142,6 +143,8 @@ func parseCondition(str string) (Condition, error) {
 		return parseBrowserCondition(str)
 	} else if strings.HasPrefix(str, "app.") {
 		return parseAppCondition(str)
+	} else if strings.HasPrefix(str, "window.") {
+		return parseWindowCondition(str)
 	}
 
 	return nil, fmt.Errorf("unknown condition: %s", str)
@@ -210,6 +213,24 @@ func parseAppCondition(str string) (Condition, error) {
 	name := strings.TrimPrefix(parts[0], "app.")
 
 	return &AppCondition{Name: name}, nil
+}
+
+func parseWindowCondition(str string) (Condition, error) {
+	// window.class matches firefox
+	// window.class matches "Google Chrome"
+
+	if strings.Contains(str, " matches ") {
+		parts := strings.SplitN(str, " matches ", 2)
+		field := strings.TrimPrefix(parts[0], "window.")
+		pattern := strings.TrimSpace(parts[1])
+		pattern = strings.Trim(pattern, "\"")
+
+		if field == "class" {
+			return &WindowClassCondition{Pattern: pattern}, nil
+		}
+	}
+
+	return nil, fmt.Errorf("unknown window condition: %s", str)
 }
 
 func parseActions(str string) ([]Action, error) {

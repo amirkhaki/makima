@@ -3,6 +3,7 @@ package engine
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/amirkhaki/makima/internal/dsl"
 	"github.com/amirkhaki/makima/internal/log"
@@ -220,6 +221,12 @@ func (e *Engine) evaluateCondition(cond dsl.Condition) bool {
 		hypr := e.state.GetHyprland()
 		match := matchGlob(c.Pattern, hypr.WindowClass)
 		log.Debug("engine", "window class check: pattern=%s class=%s match=%v", c.Pattern, hypr.WindowClass, match)
+		return match
+	case *dsl.TimeOnSiteCondition:
+		browser := e.state.GetBrowser()
+		// TimeOnSite is in seconds, Duration is in time.Duration
+		match := time.Duration(browser.TimeOnSite)*time.Second >= c.Duration
+		log.Debug("engine", "time on site check: duration=%v state=%v match=%v", c.Duration, browser.TimeOnSite, match)
 		return match
 	case *dsl.WorkspaceCountCondition:
 		hypr := e.state.GetHyprland()
