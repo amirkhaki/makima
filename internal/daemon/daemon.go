@@ -113,8 +113,9 @@ func (d *Daemon) checkBudget() {
 		if d.chromeTracker != nil {
 			tabs, err := d.chromeTracker.GetTabs()
 			if err == nil && len(tabs) > 0 {
-				// Close the first tab (most likely the active one)
-				d.chromeTracker.CloseTab(tabs[0].ID)
+				if err := d.chromeTracker.CloseTab(tabs[0].ID); err != nil {
+					log.Error("daemon: failed to close tab: %v", err)
+				}
 			}
 		}
 		// Clear budget

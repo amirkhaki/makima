@@ -102,8 +102,8 @@ func (e *Engine) SetCategories(categories map[string]*dsl.Category) {
 }
 
 func (e *Engine) Evaluate() []RuleEvent {
-	e.mu.RLock()
-	defer e.mu.RUnlock()
+	e.mu.Lock()
+	defer e.mu.Unlock()
 
 	var events []RuleEvent
 

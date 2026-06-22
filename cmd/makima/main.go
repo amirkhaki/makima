@@ -774,16 +774,17 @@ func newClient() (*cli.Client, error) {
 
 var todoStore *todo.Store
 var todoStoreMu sync.Mutex
-var todoStoreErr error
 
 func getTodoStore() *todo.Store {
 	todoStoreMu.Lock()
 	defer todoStoreMu.Unlock()
 	if todoStore == nil {
-		todoStore, todoStoreErr = todo.NewStore(getConfigDir() + "/todos.json")
-		if todoStoreErr != nil {
-			log.Error("failed to load todo store: %v", todoStoreErr)
+		store, err := todo.NewStore(getConfigDir() + "/todos.json")
+		if err != nil {
+			log.Error("failed to load todo store: %v", err)
+			return nil
 		}
+		todoStore = store
 	}
 	return todoStore
 }
