@@ -326,9 +326,9 @@ func handleRequest(req daemon.Request, state *tracker.State, ruleEngine *engine.
 		}
 		// Find and enable rule by ID
 		rules := ruleEngine.GetRules()
-		for _, rule := range rules {
+		for i, rule := range rules {
 			if rule.ID == params.ID {
-				rule.Enabled = true
+				ruleEngine.SetRuleEnabled(i, true)
 				return daemon.Response{ID: req.ID, Result: "ok"}
 			}
 		}
@@ -342,9 +342,9 @@ func handleRequest(req daemon.Request, state *tracker.State, ruleEngine *engine.
 		}
 		// Find and disable rule by ID
 		rules := ruleEngine.GetRules()
-		for _, rule := range rules {
+		for i, rule := range rules {
 			if rule.ID == params.ID {
-				rule.Enabled = false
+				ruleEngine.SetRuleEnabled(i, false)
 				return daemon.Response{ID: req.ID, Result: "ok"}
 			}
 		}

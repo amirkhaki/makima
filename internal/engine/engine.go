@@ -51,10 +51,21 @@ func (e *Engine) RemoveRule(index int) {
 	}
 }
 
+func (e *Engine) SetRuleEnabled(index int, enabled bool) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if index >= 0 && index < len(e.rules) {
+		e.rules[index].Enabled = enabled
+	}
+}
+
 func (e *Engine) GetRules() []*dsl.Rule {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	return e.rules
+	// Return a copy to prevent external mutation
+	rules := make([]*dsl.Rule, len(e.rules))
+	copy(rules, e.rules)
+	return rules
 }
 
 func (e *Engine) AddCategory(name string, category *dsl.Category) {
@@ -73,10 +84,17 @@ func (e *Engine) RemoveCategory(name string) {
 func (e *Engine) GetCategories() map[string]*dsl.Category {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	return e.categories
+	// Return a copy to prevent external mutation
+	categories := make(map[string]*dsl.Category)
+	for k, v := range e.categories {
+		categories[k] = v
+	}
+	return categories
 }
 
 func (e *Engine) SetCategories(categories map[string]*dsl.Category) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
 	for name, cat := range categories {
 		log.Event("engine", "category loaded: %s -> %v", name, cat.Patterns)
 	}
