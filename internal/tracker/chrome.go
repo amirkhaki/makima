@@ -162,8 +162,7 @@ func (t *ChromeTracker) listenEvents(ctx context.Context) {
 		}
 	})
 
-	// Wait for context cancellation
-	<-ctx.Done()
+	// Start listening (wait() blocks until context is done)
 	wait()
 	log.Info("chrome: event listener stopped")
 }
