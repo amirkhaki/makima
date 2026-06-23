@@ -194,11 +194,9 @@ func (t *ChromeTracker) readPort() (int, error) {
 }
 
 func (t *ChromeTracker) Stop() error {
-	log.Info("chrome: stopping")
-	if t.browser != nil {
-		t.browser.Close()
-		t.browser = nil
-	}
+	log.Info("chrome: disconnecting (browser left running)")
+	// Just disconnect, don't close the browser
+	t.browser = nil
 	return nil
 }
 
