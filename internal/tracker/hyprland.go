@@ -4,7 +4,6 @@ import (
 	"context"
 	"strconv"
 	"sync"
-	"time"
 
 	"github.com/amirkhaki/makima/internal/log"
 	"github.com/thiagokokada/hyprland-go"
@@ -64,27 +63,13 @@ func (t *HyprlandTracker) Start(ctx context.Context) error {
 	}
 	t.eventCli = cli
 
-	// Subscribe to events in a goroutine
+	// Subscribe to events — this provides all state updates
 	go func() {
 		handler := &hyprlandHandler{tracker: t}
 		t.eventCli.Subscribe(ctx, handler,
 			event.EventWorkspace,
 			event.EventActiveWindow,
 		)
-	}()
-
-	// Poll current state periodically
-	go func() {
-		ticker := time.NewTicker(time.Second)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				t.updateState()
-			}
-		}
 	}()
 
 	t.running = true
