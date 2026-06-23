@@ -26,9 +26,6 @@ PluginComponent {
 
         onConnectionStateChanged: {
             console.log("Makima: socket connected:", connected)
-            if (connected) {
-                retryTimer.stop()
-            }
         }
 
         parser: SplitParser {
@@ -67,19 +64,6 @@ PluginComponent {
         socket.send(JSON.stringify({method: "budget.select", params: {minutes: minutes}}))
         modal.close()
         budgetMode = false
-    }
-
-    Timer {
-        id: retryTimer
-        interval: 2000
-        repeat: true
-        running: true
-        onTriggered: {
-            if (!socket.connected) {
-                console.log("Makima: attempting connection")
-                socket.connected = true
-            }
-        }
     }
 
     Timer {
