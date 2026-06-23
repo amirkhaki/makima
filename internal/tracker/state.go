@@ -1,13 +1,17 @@
 package tracker
 
-import "sync"
+import (
+	"sync"
+	"time"
+)
 
 type BrowserState struct {
-	URL        string
-	TabTitle   string
-	Domain     string
-	Category   string
-	TimeOnSite int
+	URL         string
+	TabTitle    string
+	Domain      string
+	Category    string
+	TimeOnSite  int
+	SiteStarted time.Time
 }
 
 type HyprlandState struct {

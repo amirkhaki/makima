@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/amirkhaki/makima/internal/log"
 	"github.com/go-rod/rod"
@@ -211,21 +212,23 @@ func (t *ChromeTracker) updateTab(tab TabInfo) {
 	// Get current state to calculate time on site
 	current := t.state.GetBrowser()
 	
-	// If URL changed, reset time on site
+	// If URL changed, reset time on site and track start time
 	if current.URL != tab.URL {
 		t.state.UpdateBrowser(BrowserState{
-			URL:       tab.URL,
-			TabTitle:  tab.Title,
-			Domain:    tab.Domain,
-			TimeOnSite: 0,
+			URL:         tab.URL,
+			TabTitle:    tab.Title,
+			Domain:      tab.Domain,
+			TimeOnSite:  0,
+			SiteStarted: time.Now(),
 		})
 	} else {
-		// Same URL, increment time on site
+		// Same URL, calculate elapsed time since site was first visited
+		elapsed := int(time.Since(current.SiteStarted).Seconds())
 		t.state.UpdateBrowser(BrowserState{
 			URL:        tab.URL,
 			TabTitle:   tab.Title,
 			Domain:     tab.Domain,
-			TimeOnSite: current.TimeOnSite + 1,
+			TimeOnSite: elapsed,
 		})
 	}
 }

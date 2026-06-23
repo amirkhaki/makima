@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -168,8 +167,8 @@ func (e *Engine) Evaluate() []RuleEvent {
 }
 
 func (e *Engine) checkGraceCooldown(rule *dsl.Rule) bool {
-	// Use rule condition string as session key
-	key := fmt.Sprintf("%T", rule.Condition)
+	// Use rule ID as session key for per-rule sessions
+	key := rule.ID
 	session := e.sessionMgr.GetOrCreate(key, rule.Grace, rule.Cooldown)
 
 	if session.InGrace() {
@@ -182,7 +181,7 @@ func (e *Engine) checkGraceCooldown(rule *dsl.Rule) bool {
 }
 
 func (e *Engine) fireSession(rule *dsl.Rule) {
-	key := fmt.Sprintf("%T", rule.Condition)
+	key := rule.ID
 	session := e.sessionMgr.GetOrCreate(key, rule.Grace, rule.Cooldown)
 	session.FireAction()
 }
