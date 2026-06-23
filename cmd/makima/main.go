@@ -9,7 +9,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
-	"sync"
 	"syscall"
 	"time"
 
@@ -19,7 +18,6 @@ import (
 	"github.com/amirkhaki/makima/internal/engine"
 	"github.com/amirkhaki/makima/internal/log"
 	"github.com/amirkhaki/makima/internal/tracker"
-	"github.com/amirkhaki/makima/internal/todo"
 )
 
 const version = "0.1.0"
@@ -42,8 +40,6 @@ func main() {
 		ruleCmd(args[1:])
 	case "category":
 		categoryCmd(args[1:])
-	case "todo":
-		todoCmd(args[1:])
 	case "config":
 		configCmd(args[1:])
 	case "log":
@@ -83,13 +79,6 @@ Commands:
     list          List all categories
     add           Add a new category
     remove        Remove a category
-
-  todo            Manage todos
-    list          List all todos
-    add           Add a new todo
-    done          Mark a todo as complete
-    remove        Remove a todo
-    tree          Show todo tree
 
   config          Show or set configuration
   log             Show daemon logs
@@ -384,70 +373,6 @@ func handleRequest(req daemon.Request, state *tracker.State, ruleEngine *engine.
 		}
 		ruleEngine.RemoveCategory(params.Name)
 		return daemon.Response{ID: req.ID, Result: "ok"}
-	case "todo.list":
-		store := getTodoStore()
-		if store == nil {
-			return daemon.Response{ID: req.ID, Error: "failed to load todo store"}
-		}
-		todos := store.List()
-		return daemon.Response{
-			ID:     req.ID,
-			Result: todos,
-		}
-	case "todo.add":
-		var params struct {
-			Text     string  `json:"text"`
-			ParentID *string `json:"parent_id,omitempty"`
-		}
-		if err := json.Unmarshal(req.Params, &params); err != nil {
-			return daemon.Response{ID: req.ID, Error: err.Error()}
-		}
-		store := getTodoStore()
-		if store == nil {
-			return daemon.Response{ID: req.ID, Error: "failed to load todo store"}
-		}
-		parentID := ""
-		if params.ParentID != nil {
-			parentID = *params.ParentID
-		}
-		id, err := store.Add(params.Text, parentID)
-		if err != nil {
-			return daemon.Response{ID: req.ID, Error: err.Error()}
-		}
-		return daemon.Response{
-			ID:     req.ID,
-			Result: id,
-		}
-	case "todo.done":
-		var params struct {
-			ID string `json:"id"`
-		}
-		if err := json.Unmarshal(req.Params, &params); err != nil {
-			return daemon.Response{ID: req.ID, Error: err.Error()}
-		}
-		store := getTodoStore()
-		if store == nil {
-			return daemon.Response{ID: req.ID, Error: "failed to load todo store"}
-		}
-		if err := store.Complete(params.ID); err != nil {
-			return daemon.Response{ID: req.ID, Error: err.Error()}
-		}
-		return daemon.Response{ID: req.ID, Result: "ok"}
-	case "todo.remove":
-		var params struct {
-			ID string `json:"id"`
-		}
-		if err := json.Unmarshal(req.Params, &params); err != nil {
-			return daemon.Response{ID: req.ID, Error: err.Error()}
-		}
-		store := getTodoStore()
-		if store == nil {
-			return daemon.Response{ID: req.ID, Error: "failed to load todo store"}
-		}
-		if err := store.Remove(params.ID); err != nil {
-			return daemon.Response{ID: req.ID, Error: err.Error()}
-		}
-		return daemon.Response{ID: req.ID, Result: "ok"}
 	default:
 		return daemon.Response{
 			ID:    req.ID,
@@ -602,89 +527,6 @@ func categoryCmd(args []string) {
 	}
 }
 
-func todoCmd(args []string) {
-	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "Usage: makima todo <list|add|done|remove|tree>")
-		os.Exit(1)
-	}
-
-	client, err := newClient()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to connect to daemon: %v\n", err)
-		os.Exit(1)
-	}
-	defer client.Close()
-
-	switch args[0] {
-	case "list":
-		todos, err := client.TodoList()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to list todos: %v\n", err)
-			os.Exit(1)
-		}
-		for _, todo := range todos {
-			status := " "
-			if todo.Completed {
-				status = "x"
-			}
-			fmt.Printf("[%s] %s\n", status, todo.Text)
-		}
-	case "add":
-		if len(args) < 2 {
-			fmt.Fprintln(os.Stderr, "Usage: makima todo add <text> [--parent <id>]")
-			os.Exit(1)
-		}
-		text := args[1]
-		var parentID *string
-		// Check for --parent flag
-		for i := 2; i < len(args)-1; i++ {
-			if args[i] == "--parent" {
-				id := args[i+1]
-				parentID = &id
-				break
-			}
-		}
-		id, err := client.TodoAdd(text, parentID)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to add todo: %v\n", err)
-			os.Exit(1)
-		}
-		fmt.Printf("Todo added with ID: %s\n", id)
-	case "done":
-		if len(args) < 2 {
-			fmt.Fprintln(os.Stderr, "Usage: makima todo done <id>")
-			os.Exit(1)
-		}
-		err := client.TodoDone(args[1])
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to mark todo done: %v\n", err)
-			os.Exit(1)
-		}
-		fmt.Println("Todo marked done")
-	case "remove":
-		if len(args) < 2 {
-			fmt.Fprintln(os.Stderr, "Usage: makima todo remove <id>")
-			os.Exit(1)
-		}
-		err := client.TodoRemove(args[1])
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to remove todo: %v\n", err)
-			os.Exit(1)
-		}
-		fmt.Println("Todo removed")
-	case "tree":
-		store := getTodoStore()
-		if store == nil {
-			fmt.Fprintf(os.Stderr, "Failed to load todos\n")
-			os.Exit(1)
-		}
-		fmt.Println(store.TreeString())
-	default:
-		fmt.Fprintf(os.Stderr, "Unknown todo subcommand: %s\n", args[0])
-		os.Exit(1)
-	}
-}
-
 func configCmd(args []string) {
 	configDir := getConfigDir()
 	
@@ -781,23 +623,6 @@ func getSocketPath() string {
 
 func newClient() (*cli.Client, error) {
 	return cli.NewClient(getSocketPath())
-}
-
-var todoStore *todo.Store
-var todoStoreMu sync.Mutex
-
-func getTodoStore() *todo.Store {
-	todoStoreMu.Lock()
-	defer todoStoreMu.Unlock()
-	if todoStore == nil {
-		store, err := todo.NewStore(getConfigDir() + "/todos.json")
-		if err != nil {
-			log.Error("failed to load todo store: %v", err)
-			return nil
-		}
-		todoStore = store
-	}
-	return todoStore
 }
 
 func conditionToString(cond dsl.Condition) string {

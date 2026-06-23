@@ -89,6 +89,14 @@ func (a *ActionExecutor) executeCDP(action *dsl.CDPAction) error {
 			return err
 		}
 		if len(tabs) > 0 {
+			// Try to find the active tab using Hyprland window title
+			hypr := a.state.GetHyprland()
+			for _, tab := range tabs {
+				if hypr.WindowTitle != "" && strings.Contains(hypr.WindowTitle, tab.Title) {
+					return a.chrome.CloseTab(tab.ID)
+				}
+			}
+			// Fallback: close first tab if no title match
 			return a.chrome.CloseTab(tabs[0].ID)
 		}
 		return fmt.Errorf("no tabs to close")
