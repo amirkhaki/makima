@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -113,6 +114,18 @@ func (d *Daemon) checkBudget() {
 		if d.chromeTracker != nil {
 			tabs, err := d.chromeTracker.GetTabs()
 			if err == nil && len(tabs) > 0 {
+				// Find the active tab using Hyprland window title
+				hypr := d.state.GetHyprland()
+				for _, tab := range tabs {
+					if hypr.WindowTitle != "" && strings.Contains(hypr.WindowTitle, tab.Title) {
+						if err := d.chromeTracker.CloseTab(tab.ID); err != nil {
+							log.Error("daemon: failed to close tab: %v", err)
+						}
+						d.sessionMgr.SetBudget(0)
+						return
+					}
+				}
+				// Fallback: close first tab if no title match
 				if err := d.chromeTracker.CloseTab(tabs[0].ID); err != nil {
 					log.Error("daemon: failed to close tab: %v", err)
 				}
@@ -213,18 +226,37 @@ func (d *Daemon) pollBrowserTab() {
 		return
 	}
 
-	// Query CDP for the active tab
+	// Query CDP for all tabs
 	tabs, err := d.chromeTracker.GetTabs()
 	if err != nil || len(tabs) == 0 {
 		return
 	}
 
-	// Find the tab with the most recent URL (active tab)
-	// The first tab is typically the active one in Chrome/Brave
+	// Try to find the active tab by matching Hyprland window title against tab titles
+	// Browser window titles typically include the tab title
+	windowTitle := hypr.WindowTitle
+	for _, tab := range tabs {
+		if windowTitle != "" && strings.Contains(windowTitle, tab.Title) {
+			// Found matching tab
+			if browser.URL != tab.URL {
+				log.Event("daemon", "active tab detected: %s (%s) via title match", tab.Domain, tab.URL)
+				d.state.UpdateBrowser(tracker.BrowserState{
+					URL:         tab.URL,
+					TabTitle:    tab.Title,
+					Domain:      tab.Domain,
+					TimeOnSite:  0,
+					SiteStarted: time.Now(),
+				})
+				d.evaluateAndExecute()
+			}
+			return
+		}
+	}
+
+	// Fallback: if no title match, use first tab (previous behavior)
 	for _, tab := range tabs {
 		if browser.URL != tab.URL {
-			log.Event("daemon", "browser tab detected: %s (%s)", tab.Domain, tab.URL)
-			// Preserve SiteStarted from current state
+			log.Event("daemon", "browser tab detected: %s (%s) (fallback)", tab.Domain, tab.URL)
 			d.state.UpdateBrowser(tracker.BrowserState{
 				URL:         tab.URL,
 				TabTitle:    tab.Title,
@@ -232,7 +264,6 @@ func (d *Daemon) pollBrowserTab() {
 				TimeOnSite:  0,
 				SiteStarted: time.Now(),
 			})
-			// Trigger rule evaluation after state update
 			d.evaluateAndExecute()
 			return
 		}
