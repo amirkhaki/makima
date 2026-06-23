@@ -4,7 +4,6 @@ import (
 	"context"
 	"strconv"
 	"sync"
-	"time"
 
 	"github.com/amirkhaki/makima/internal/log"
 	"github.com/thiagokokada/hyprland-go"
@@ -64,28 +63,14 @@ func (t *HyprlandTracker) Start(ctx context.Context) error {
 	}
 	t.eventCli = cli
 
-	// Subscribe to events — this provides all state updates
+	// Subscribe to events including windowtitlev2 for tab change detection
 	go func() {
 		handler := &hyprlandHandler{tracker: t}
 		t.eventCli.Subscribe(ctx, handler,
 			event.EventWorkspace,
 			event.EventActiveWindow,
+			event.EventWindowTitleV2,
 		)
-	}()
-
-	// Lightweight poll: check window title every 500ms when browser is focused
-	// This detects tab changes that don't trigger ActiveWindow events
-	go func() {
-		ticker := time.NewTicker(500 * time.Millisecond)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				t.checkBrowserTitle()
-			}
-		}
 	}()
 
 	t.running = true
@@ -109,35 +94,6 @@ func (t *HyprlandTracker) Stop() error {
 
 func (t *HyprlandTracker) Events() <-chan Event {
 	return t.events
-}
-
-// checkBrowserTitle polls the window title when browser is focused
-// This detects tab changes that don't trigger ActiveWindow events
-func (t *HyprlandTracker) checkBrowserTitle() {
-	if t.requestCli == nil {
-		return
-	}
-
-	window, err := t.requestCli.ActiveWindow()
-	if err != nil {
-		return
-	}
-
-	// Only process if browser is focused
-	if window.Class != "brave-browser" && window.Class != "chrome" && window.Class != "chromium" {
-		return
-	}
-
-	current := t.state.GetHyprland()
-	if current.WindowTitle != window.Title {
-		log.Debug("hyprland", "browser title changed: %s -> %s", current.WindowTitle, window.Title)
-		current.WindowTitle = window.Title
-		t.state.UpdateHyprland(current)
-		t.events <- Event{
-			Type: "window",
-			Data: window,
-		}
-	}
 }
 
 func (t *HyprlandTracker) updateState() {
@@ -191,5 +147,18 @@ func (h *hyprlandHandler) ActiveWindow(w event.ActiveWindow) {
 	h.tracker.events <- Event{
 		Type: "window",
 		Data: w,
+	}
+}
+
+func (h *hyprlandHandler) WindowTitleV2(w event.WindowTitleV2) {
+	current := h.tracker.state.GetHyprland()
+	if current.WindowTitle != w.Title {
+		log.Debug("hyprland", "window title changed: %s -> %s", current.WindowTitle, w.Title)
+		current.WindowTitle = w.Title
+		h.tracker.state.UpdateHyprland(current)
+		h.tracker.events <- Event{
+			Type: "window",
+			Data: w,
+		}
 	}
 }
