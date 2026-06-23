@@ -306,18 +306,20 @@ func splitActions(str string) []string {
 			inQuote = !inQuote
 			current.WriteByte(ch)
 		} else if !inQuote && ch == ' ' {
-			// Check if next word is "then" or "and"
+			// Check if next word is "then", "and", or "or"
 			remaining := str[i+1:]
-			if strings.HasPrefix(remaining, "then ") || strings.HasPrefix(remaining, "and ") {
+			if strings.HasPrefix(remaining, "then ") || strings.HasPrefix(remaining, "and ") || strings.HasPrefix(remaining, "or ") {
 				if current.Len() > 0 {
 					parts = append(parts, current.String())
 				}
 				current.Reset()
-				// Skip past "then " or "and "
+				// Skip past keyword
 				if strings.HasPrefix(remaining, "then ") {
 					i += 5
-				} else {
+				} else if strings.HasPrefix(remaining, "and ") {
 					i += 4
+				} else {
+					i += 3 // "or "
 				}
 			} else {
 				current.WriteByte(ch)

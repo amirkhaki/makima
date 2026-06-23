@@ -631,10 +631,20 @@ func todoCmd(args []string) {
 		}
 	case "add":
 		if len(args) < 2 {
-			fmt.Fprintln(os.Stderr, "Usage: makima todo add <text>")
+			fmt.Fprintln(os.Stderr, "Usage: makima todo add <text> [--parent <id>]")
 			os.Exit(1)
 		}
-		id, err := client.TodoAdd(args[1], nil)
+		text := args[1]
+		var parentID *string
+		// Check for --parent flag
+		for i := 2; i < len(args)-1; i++ {
+			if args[i] == "--parent" {
+				id := args[i+1]
+				parentID = &id
+				break
+			}
+		}
+		id, err := client.TodoAdd(text, parentID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to add todo: %v\n", err)
 			os.Exit(1)
