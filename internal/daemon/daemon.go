@@ -208,6 +208,11 @@ func (d *Daemon) pollBrowserTab() {
 		return
 	}
 
+	// Check if chrome tracker is available
+	if d.chromeTracker == nil {
+		return
+	}
+
 	// Query CDP for the active tab
 	tabs, err := d.chromeTracker.GetTabs()
 	if err != nil || len(tabs) == 0 {
@@ -219,10 +224,13 @@ func (d *Daemon) pollBrowserTab() {
 	for _, tab := range tabs {
 		if browser.URL != tab.URL {
 			log.Event("daemon", "browser tab detected: %s (%s)", tab.Domain, tab.URL)
+			// Preserve SiteStarted from current state
 			d.state.UpdateBrowser(tracker.BrowserState{
-				URL:      tab.URL,
-				TabTitle: tab.Title,
-				Domain:   tab.Domain,
+				URL:         tab.URL,
+				TabTitle:    tab.Title,
+				Domain:      tab.Domain,
+				TimeOnSite:  0,
+				SiteStarted: time.Now(),
 			})
 			// Trigger rule evaluation after state update
 			d.evaluateAndExecute()
